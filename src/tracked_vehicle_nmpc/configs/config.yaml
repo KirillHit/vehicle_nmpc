@@ -1,0 +1,10 @@
+defaults:
+  - model: object_314
+  - controller: rti_nmpc
+  - _self_
+
+seed: 42
+
+hydra:
+  run:
+    dir: logs/${now:%Y-%m-%d}/${now:%H-%M-%S}

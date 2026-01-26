@@ -1,6 +1,7 @@
 
 services:
   acados:
+    image: acados:latest
     build:
       context: .
       dockerfile: dockerfile
@@ -10,5 +11,10 @@ services:
       - QT_X11_NO_MITSHM=1
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./src/tracked_vehicle_nmpc:/workspace/tracked_vehicle_nmpc:ro
+      - ./logs:/workspace/logs
+      - ./acados_codegen:/workspace/acados_codegen
     tty: true
     stdin_open: true
+    working_dir: /workspace
+    command: ["python3", "-m", "tracked_vehicle_nmpc.run"]

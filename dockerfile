@@ -14,8 +14,7 @@ RUN apt-get install -y \
     python3-venv \
     python3-pip \
     python3-dev \
-    libblas-dev \
-    liblapack-dev \
+    python3-tk \
     curl \
     unzip \
     && rm -rf /var/lib/apt/lists/*
@@ -42,8 +41,12 @@ RUN mkdir acados/build && cd acados/build && \
 RUN python3 -m venv env
 ENV PATH="/workspace/env/bin:$PATH"
 
-# Upgrade pip and install setuptools/wheel
-RUN pip install --upgrade pip setuptools wheel
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install Python requirements
+COPY requirements.txt .
+RUN pip install -r ./requirements.txt
 
 # Install editable acados_template Python package
 RUN pip install -e acados/interfaces/acados_template
@@ -51,8 +54,3 @@ RUN pip install -e acados/interfaces/acados_template
 # Export environment variables for acados libs
 ENV ACADOS_SOURCE_DIR=/workspace/acados
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/workspace/acados/lib
-
-RUN apt-get install -y python3-tk
-
-# Default entrypoint
-ENTRYPOINT ["/bin/bash"]
