@@ -1,10 +1,14 @@
 defaults:
-  - model: object_314
+  - base_config
+  - model: tracked_veh_kinematic
+  - executor: base
   - controller: rti_nmpc
+  - override hydra/job_logging: colorlog
   - _self_
-
-seed: 42
-
+    
 hydra:
   run:
-    dir: logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: logs/${executor.experiment_name}/${now:%Y-%m-%d_%H-%M-%S}_${model.name}_${controller.name}
+  sweep:
+    dir: logs/${executor.experiment_name}/${now:%Y-%m-%d_%H-%M-%S}_${model.name}_${controller.name}
+    subdir: ${hydra.job.num}

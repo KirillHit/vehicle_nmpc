@@ -1,0 +1,5 @@
+defaults:
+  - base_tracked_veh_kinematic
+
+name: tracked_veh_kinematic
+width: 100

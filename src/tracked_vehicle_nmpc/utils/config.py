@@ -3,33 +3,38 @@
 from dataclasses import dataclass, field
 
 from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
 
-
-@dataclass
-class ModelConfig:
-    """Top-level model configuration."""
-
-    name: str
+from tracked_vehicle_nmpc.models import BaseModelConfig, TrackedVehKinematicConfig
 
 
 @dataclass
 class ControllerConfig:
     """Top-level controller configuration."""
 
-    name: str
+    name: str = MISSING
 
 
 @dataclass
-class MyConfig:
-    """Root app configuration schema for Hydra."""
-
-    model: ModelConfig = field(default_factory=ModelConfig)
-    controller: ControllerConfig = field(default_factory=ControllerConfig)
+class ExecutorConfig:
+    """Top-level runner configuration."""
 
     seed: int = 42
+    experiment_name: str = MISSING
+    mode: str = MISSING
 
 
-def init_hydra() -> None:
+@dataclass
+class BaseConfig:
+    """Root app configuration schema for Hydra."""
+
+    model: BaseModelConfig = MISSING
+    controller: ControllerConfig = field(default_factory=ControllerConfig)
+    executor: ExecutorConfig = field(default_factory=ExecutorConfig)
+
+
+def register_configs() -> None:
     """Register the root config schema in Hydra's ConfigStore."""
     cs = ConfigStore.instance()
-    cs.store(name="config", node=MyConfig)
+    cs.store(name="base_config", node=BaseConfig)
+    cs.store(group="model", name="base_tracked_veh_kinematic", node=TrackedVehKinematicConfig)
