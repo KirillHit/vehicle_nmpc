@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 
 import numpy as np
+from acados_template import AcadosModel
 from casadi import SX, cos, sin, vertcat
 from omegaconf import MISSING
 
-from acados_template import AcadosModel
 from vehicle_nmpc.models import BaseModel, BaseModelConfig, ModelBundle, register_model
 
 
