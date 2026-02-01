@@ -1,6 +1,17 @@
 """Model definitions and configuration types."""
 
-from .base_model import BaseModel, BaseModelConfig
-from .tracked_veh_kinematic import TrackedVehKinematic, TrackedVehKinematicConfig
+from .base_model import BaseModel, BaseModelConfig, ModelBundle
+from .builder import build_model, register_model
 
-__all__ = ["BaseModel", "BaseModelConfig", "TrackedVehKinematic", "TrackedVehKinematicConfig"]
+# Models
+from .tracked_veh import TrackedVehKinematicConfig, TrackedVehKinematicModel
+
+__all__ = [
+    "BaseModel",
+    "BaseModelConfig",
+    "ModelBundle",
+    "TrackedVehKinematicConfig",
+    "TrackedVehKinematicModel",
+    "build_model",
+    "register_model",
+]

@@ -2,14 +2,9 @@
 
 import logging
 
-from vehicle_nmpc.models import BaseModel, BaseModelConfig, TrackedVehKinematic
 from vehicle_nmpc.utils.config import BaseConfig, RunnerMode
 
 log = logging.getLogger(__name__)
-
-MODEL_REGISTRY: dict[str, type[BaseModel]] = {
-    "tracked_veh_kinematic": TrackedVehKinematic,
-}
 
 
 class Runner:
@@ -35,9 +30,6 @@ class Runner:
                 raise ValueError(msg)
 
         log.info("Experiment finished.")
-
-    def create_model(self, cfg: BaseModelConfig) -> BaseModel:
-        """Create a model instance from the configured model name."""
 
     def open_loop(self, cfg: BaseConfig) -> None:
         """Run the open-loop execution path."""

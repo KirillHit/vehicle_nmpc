@@ -45,4 +45,4 @@ def register_configs() -> None:
     """Register the root config schema in Hydra's ConfigStore."""
     cs = ConfigStore.instance()
     cs.store(name="base_config", node=BaseConfig)
-    cs.store(group="model", name="base_tracked_veh_kinematic", node=TrackedVehKinematicConfig)
+    cs.store(group="model", name="tracked_veh_kinematic_config", node=TrackedVehKinematicConfig)

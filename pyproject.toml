@@ -28,5 +28,6 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "INP001"
+  "INP001",
+  "PLC0415"
 ]
