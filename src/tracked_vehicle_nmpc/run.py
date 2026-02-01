@@ -5,7 +5,7 @@ import logging
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from tracked_vehicle_nmpc.executor import Executor
+from tracked_vehicle_nmpc.utils import Runner
 from tracked_vehicle_nmpc.utils.config import BaseConfig, register_configs
 
 register_configs()
@@ -21,8 +21,11 @@ def main(cfg: DictConfig) -> None:
         log.error("Invalid configuration type: %s.", type(cfg_obj).__name__)
         return
 
-    executor = Executor()
-    executor.run(cfg_obj)
+    runner = Runner()
+    try:
+        runner.run(cfg_obj)
+    except Exception:
+        log.exception("Experiment failed!")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from omegaconf import MISSING
 
 if TYPE_CHECKING:
     import numpy as np
+
     from acados_template import AcadosModel
 
 

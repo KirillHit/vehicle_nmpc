@@ -1,6 +1,7 @@
 """Utilities for Hydra configuration registration."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
@@ -15,13 +16,20 @@ class ControllerConfig:
     name: str = MISSING
 
 
+class RunnerMode(str, Enum):
+    """Supported runner modes."""
+
+    open_loop = "open_loop"
+    closed_loop = "closed_loop"
+
+
 @dataclass
-class ExecutorConfig:
+class RunnerConfig:
     """Top-level runner configuration."""
 
     seed: int = 42
     experiment_name: str = MISSING
-    mode: str = MISSING
+    mode: RunnerMode = MISSING
 
 
 @dataclass
@@ -30,7 +38,7 @@ class BaseConfig:
 
     model: BaseModelConfig = MISSING
     controller: ControllerConfig = field(default_factory=ControllerConfig)
-    executor: ExecutorConfig = field(default_factory=ExecutorConfig)
+    runner: RunnerConfig = field(default_factory=RunnerConfig)
 
 
 def register_configs() -> None:

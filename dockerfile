@@ -3,9 +3,9 @@ FROM ubuntu:24.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install core build tools and dependencies
-RUN apt-get update && apt-get upgrade -y
-
-RUN apt-get install -y \
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     git \
@@ -17,7 +17,7 @@ RUN apt-get install -y \
     python3-tk \
     curl \
     unzip \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /workspace
