@@ -1,12 +1,12 @@
-"""Entrypoint for the tracked vehicle NMPC application."""
+"""Entrypoint for the vehicle NMPC application."""
 
 import logging
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from tracked_vehicle_nmpc.utils import Runner
-from tracked_vehicle_nmpc.utils.config import BaseConfig, register_configs
+from vehicle_nmpc.utils import Runner
+from vehicle_nmpc.utils.config import BaseConfig, register_configs
 
 register_configs()
 

@@ -1,10 +1,10 @@
 [project]
-name = "tracked_vehicle_nmpc"
+name = "vehicle_nmpc"
 version = "1.0.0"
 authors = [
   { name="Kirill Khitushkin", email="khitushkink@mail.ru" },
 ]
-description = "Nonlinear model predictive control for a tracked vehicle."
+description = "Nonlinear model predictive control for ground vehicles."
 readme = "README.md"
 requires-python = ">=3.12"
 dynamic = ["dependencies"]
@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 
 [project.urls]
-"Homepage" = "https://github.com/KirillHit/tracked_vehicle_nmpc"
+"Homepage" = "https://github.com/KirillHit/vehicle_nmpc"
 
 [build-system]
 requires = ["setuptools>=61", "wheel"]

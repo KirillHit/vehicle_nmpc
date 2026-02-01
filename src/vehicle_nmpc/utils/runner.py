@@ -2,8 +2,8 @@
 
 import logging
 
-from tracked_vehicle_nmpc.models import BaseModel, BaseModelConfig, TrackedVehKinematic
-from tracked_vehicle_nmpc.utils.config import BaseConfig, RunnerMode
+from vehicle_nmpc.models import BaseModel, BaseModelConfig, TrackedVehKinematic
+from vehicle_nmpc.utils.config import BaseConfig, RunnerMode
 
 log = logging.getLogger(__name__)
 

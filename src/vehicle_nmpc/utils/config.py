@@ -6,7 +6,7 @@ from enum import Enum
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from tracked_vehicle_nmpc.models import BaseModelConfig, TrackedVehKinematicConfig
+from vehicle_nmpc.models import BaseModelConfig, TrackedVehKinematicConfig
 
 
 @dataclass
