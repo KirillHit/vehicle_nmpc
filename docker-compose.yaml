@@ -1,6 +1,7 @@
 
 services:
   acados:
+    user: "${USER_ID}:${GROUP_ID}"
     image: acados:latest
     build:
       context: .
@@ -12,9 +13,8 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./src/vehicle_nmpc:/workspace/vehicle_nmpc:ro
-      - ./logs:/workspace/logs
-      - ./acados_codegen:/workspace/acados_codegen
+      - ./runs:/workspace/runs
     tty: true
     stdin_open: true
     working_dir: /workspace
-    command: ["python3", "-m", "vehicle_nmpc.run"]
+    command: ["/bin/sh", "-lc", "chown -R ${USER_ID}:${GROUP_ID} /workspace/runs && exec python3 -m vehicle_nmpc.run"]

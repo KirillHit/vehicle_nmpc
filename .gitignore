@@ -208,6 +208,6 @@ __marimo__/
 
 # Custom
 .vscode
-logs
+runs
 acados_codegen
 acados_template

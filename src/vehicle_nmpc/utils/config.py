@@ -2,18 +2,10 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
-
-from vehicle_nmpc.models import BaseModelConfig, TrackedVehKinematicConfig
-
-
-@dataclass
-class ControllerConfig:
-    """Top-level controller configuration."""
-
-    name: str = MISSING
 
 
 class RunnerMode(str, Enum):
@@ -33,16 +25,49 @@ class RunnerConfig:
 
 
 @dataclass
+class ModelConfig:
+    """Top-level model configuration."""
+
+    name: str = MISSING
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ProblemConfig:
+    """Top-level problem configuration."""
+
+    name: str = MISSING
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ControllerConfig:
+    """Top-level controller configuration."""
+
+    name: str = MISSING
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class SimConfig:
+    """Top-level simulator configuration."""
+
+    name: str = MISSING
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class BaseConfig:
     """Root app configuration schema for Hydra."""
 
-    model: BaseModelConfig = MISSING
-    controller: ControllerConfig = field(default_factory=ControllerConfig)
     runner: RunnerConfig = field(default_factory=RunnerConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
+    problem: ProblemConfig = field(default_factory=ProblemConfig)
+    controller: ControllerConfig = field(default_factory=ControllerConfig)
+    sim: SimConfig = field(default_factory=SimConfig)
 
 
 def register_configs() -> None:
     """Register the root config schema in Hydra's ConfigStore."""
     cs = ConfigStore.instance()
     cs.store(name="base_config", node=BaseConfig)
-    cs.store(group="model", name="tracked_veh_kinematic_config", node=TrackedVehKinematicConfig)

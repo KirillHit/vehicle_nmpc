@@ -1,6 +1,8 @@
 defaults:
   - base_config
   - model: tracked_veh_kinematic
+  - problem: acados_ocp
+  - sim: acados_sim
   - runner: base
   - controller: rti_nmpc
   - override hydra/job_logging: colorlog

@@ -2,6 +2,10 @@
 
 import logging
 
+from vehicle_nmpc.controller import build_controller
+from vehicle_nmpc.models import build_model
+from vehicle_nmpc.problem import build_problem
+from vehicle_nmpc.sim import build_simulator
 from vehicle_nmpc.utils.config import BaseConfig, RunnerMode
 
 log = logging.getLogger(__name__)
@@ -33,6 +37,20 @@ class Runner:
 
     def open_loop(self, cfg: BaseConfig) -> None:
         """Run the open-loop execution path."""
+        model = build_model(cfg.model).build()
+        problem = build_problem(cfg.problem, model).build()
+        controller = build_controller(cfg.controller, problem, model)
+        simulator = build_simulator(cfg.sim, problem, model)
+
+        controller.reset(model.x0)
+        simulator.reset(model.x0)
 
     def closed_loop(self, cfg: BaseConfig) -> None:
         """Run the closed-loop execution path."""
+        model = build_model(cfg.model).build()
+        problem = build_problem(cfg.problem, model).build()
+        controller = build_controller(cfg.controller, problem, model)
+        simulator = build_simulator(cfg.sim, problem, model)
+
+        controller.reset(model.x0)
+        simulator.reset(model.x0)

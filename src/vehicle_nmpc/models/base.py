@@ -4,20 +4,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-from omegaconf import MISSING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     import numpy as np
     from acados_template import AcadosModel
 
+    from vehicle_nmpc.utils.config import ModelConfig
 
-@dataclass
-class BaseModelConfig:
-    """Top-level model configuration."""
-
-    name: str = MISSING
+from vehicle_nmpc.utils.factory import ConfiguredBase
 
 
 @dataclass
@@ -33,13 +28,10 @@ class ModelBundle:
     u_labels: list[str] | None = None
 
 
-class BaseModel(ABC):
+class BaseModel(ConfiguredBase, ABC):
     """Abstract base class for NMPC models."""
 
-    def __init__(self, cfg: BaseModelConfig) -> None:
-        """Initialize the model with its configuration."""
-        super().__init__()
-        self._cfg = cfg
+    Config: ClassVar[type[ModelConfig]]
 
     @abstractmethod
     def build(self) -> ModelBundle:
