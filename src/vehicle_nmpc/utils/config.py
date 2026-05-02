@@ -11,14 +11,17 @@ from omegaconf import MISSING
 class RunnerMode(StrEnum):
     """Supported runner modes."""
 
-    open_loop = "open_loop"
-    """Run the controller without feeding simulator state back into the control loop."""
+    estimate = "estimate"
+    """Evaluate one configured controller and report its metrics."""
 
-    closed_loop = "closed_loop"
-    """Run the controller with simulator state feedback after each step."""
+    optimize = "optimize"
+    """Tune controller parameters with Optuna by repeatedly running estimate."""
+
+    export = "export"
+    """Generate acados C code artifacts for the configured model, problem, and solver."""
 
 
-@dataclass
+@dataclass(kw_only=True, slots=True)
 class RunnerConfig:
     """Top-level runner configuration."""
 
@@ -27,47 +30,23 @@ class RunnerConfig:
     mode: RunnerMode = MISSING
 
 
-@dataclass
-class ModelConfig:
-    """Top-level model configuration."""
+@dataclass(kw_only=True, slots=True)
+class FactoryConfig:
+    """Registry-backed component configuration."""
 
     name: str = MISSING
     params: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
-class ProblemConfig:
-    """Top-level problem configuration."""
-
-    name: str = MISSING
-    params: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class ControllerConfig:
-    """Top-level controller configuration."""
-
-    name: str = MISSING
-    params: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class SimConfig:
-    """Top-level simulator configuration."""
-
-    name: str = MISSING
-    params: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
+@dataclass(kw_only=True, slots=True)
 class BaseConfig:
     """Root app configuration schema for Hydra."""
 
     runner: RunnerConfig = field(default_factory=RunnerConfig)
-    model: ModelConfig = field(default_factory=ModelConfig)
-    problem: ProblemConfig = field(default_factory=ProblemConfig)
-    controller: ControllerConfig = field(default_factory=ControllerConfig)
-    sim: SimConfig = field(default_factory=SimConfig)
+    model: FactoryConfig = field(default_factory=FactoryConfig)
+    problem: FactoryConfig = field(default_factory=FactoryConfig)
+    controller: FactoryConfig = field(default_factory=FactoryConfig)
+    sim: FactoryConfig = field(default_factory=FactoryConfig)
 
 
 def register_configs() -> None:

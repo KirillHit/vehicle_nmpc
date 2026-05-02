@@ -5,20 +5,19 @@ from dataclasses import dataclass
 from acados_template import AcadosOcp
 
 from vehicle_nmpc.models import ModelBundle
-from vehicle_nmpc.problem.base import BaseProblem, ProblemBundle
+from vehicle_nmpc.problem.base import BaseProblem, BaseProblemConfig, ProblemBundle
 from vehicle_nmpc.problem.builder import register_problem
-from vehicle_nmpc.utils.config import ProblemConfig
 
 
 @register_problem("acados_ocp")
 class AcadosOcpProblem(BaseProblem):
     """Builds an Acados OCP from a model bundle."""
 
-    @dataclass
-    class Config(ProblemConfig):
+    @dataclass(kw_only=True, slots=True)
+    class Config(BaseProblemConfig):
         """Acados OCP problem configuration."""
 
-    def __init__(self, cfg: ProblemConfig, model: ModelBundle) -> None:
+    def __init__(self, cfg: Config, model: ModelBundle) -> None:
         """Initialize OCP problem with configuration and model bundle."""
         super().__init__(cfg, model)
 

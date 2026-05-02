@@ -25,28 +25,16 @@ class Runner:
         log.info("Experiment name: %s", cfg.runner.experiment_name)
 
         match cfg.runner.mode:
-            case RunnerMode.open_loop:
-                self.open_loop(cfg)
-            case RunnerMode.closed_loop:
-                self.closed_loop(cfg)
+            case RunnerMode.estimate | RunnerMode.optimize | RunnerMode.export:
+                self._prepare_run(cfg)
             case _:
                 msg = f"Unsupported mode: {cfg.runner.mode.value}"
                 raise ValueError(msg)
 
         log.info("Experiment finished.")
 
-    def open_loop(self, cfg: BaseConfig) -> None:
-        """Run the open-loop execution path."""
-        model = build_model(cfg.model).build()
-        problem = build_problem(cfg.problem, model).build()
-        controller = build_controller(cfg.controller, problem, model)
-        simulator = build_simulator(cfg.sim, problem, model)
-
-        controller.reset(model.x0)
-        simulator.reset(model.x0)
-
-    def closed_loop(self, cfg: BaseConfig) -> None:
-        """Run the closed-loop execution path."""
+    def _prepare_run(self, cfg: BaseConfig) -> None:
+        """Build and reset configured run components."""
         model = build_model(cfg.model).build()
         problem = build_problem(cfg.problem, model).build()
         controller = build_controller(cfg.controller, problem, model)

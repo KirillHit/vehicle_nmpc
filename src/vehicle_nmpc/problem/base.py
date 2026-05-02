@@ -10,12 +10,16 @@ if TYPE_CHECKING:
     from acados_template import AcadosOcp
 
     from vehicle_nmpc.models import ModelBundle
-    from vehicle_nmpc.utils.config import ProblemConfig
 
 from vehicle_nmpc.utils.factory import ConfiguredBase
 
 
-@dataclass
+@dataclass(kw_only=True, slots=True)
+class BaseProblemConfig:
+    """Base configuration for OCP problem implementations."""
+
+
+@dataclass(kw_only=True, slots=True)
 class ProblemBundle:
     """Container with the built problem and its metadata."""
 
@@ -25,9 +29,9 @@ class ProblemBundle:
 class BaseProblem(ConfiguredBase, ABC):
     """Abstract problem interface."""
 
-    Config: ClassVar[type[ProblemConfig]]
+    Config: ClassVar[type[BaseProblemConfig]] = BaseProblemConfig
 
-    def __init__(self, cfg: ProblemConfig, model: ModelBundle) -> None:
+    def __init__(self, cfg: BaseProblemConfig, model: ModelBundle) -> None:
         """Initialize problem with configuration and model bundle."""
         super().__init__(cfg)
         self._model = model

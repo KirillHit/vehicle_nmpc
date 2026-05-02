@@ -4,3 +4,4 @@ numpy
 scipy
 casadi
 matplotlib
+optuna

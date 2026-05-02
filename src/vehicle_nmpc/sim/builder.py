@@ -7,18 +7,24 @@ from typing import TypeVar
 from vehicle_nmpc.models import ModelBundle
 from vehicle_nmpc.problem import ProblemBundle
 from vehicle_nmpc.sim.base import BaseSimulator
-from vehicle_nmpc.utils.config import SimConfig
+from vehicle_nmpc.utils.config import FactoryConfig
 from vehicle_nmpc.utils.exceptions import SimulatorCreationError
-from vehicle_nmpc.utils.factory import build_configured_instance, register_in_registry
+from vehicle_nmpc.utils.factory import RegistrySpec, build_configured_instance, register_in_registry
 
 TSim = TypeVar("TSim", bound=BaseSimulator)
 log = logging.getLogger(__name__)
 
 SIM_REGISTRY: dict[str, type[BaseSimulator]] = {}
+SIM_SPEC = RegistrySpec(
+    registry=SIM_REGISTRY,
+    base_cls=BaseSimulator,
+    error_cls=SimulatorCreationError,
+    kind="simulator",
+)
 
 
 def build_simulator(
-    cfg: SimConfig,
+    cfg: FactoryConfig,
     problem: ProblemBundle,
     model: ModelBundle,
 ) -> BaseSimulator:
@@ -27,21 +33,11 @@ def build_simulator(
 
     return build_configured_instance(
         cfg,
-        SIM_REGISTRY,
-        BaseSimulator,
-        SimulatorCreationError,
-        "simulator",
-        problem,
-        model,
+        SIM_SPEC,
+        dependencies={"problem": problem, "model": model},
     )
 
 
 def register_simulator(name: str) -> Callable[[type[TSim]], type[TSim]]:
     """Register a simulator class under a given name."""
-    return register_in_registry(
-        name,
-        SIM_REGISTRY,
-        BaseSimulator,
-        SimulatorCreationError,
-        "simulator",
-    )
+    return register_in_registry(name, SIM_SPEC)

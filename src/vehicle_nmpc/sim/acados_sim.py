@@ -6,20 +6,19 @@ import numpy as np
 
 from vehicle_nmpc.models import ModelBundle
 from vehicle_nmpc.problem import ProblemBundle
-from vehicle_nmpc.sim.base import BaseSimulator
+from vehicle_nmpc.sim.base import BaseSimulator, BaseSimulatorConfig
 from vehicle_nmpc.sim.builder import register_simulator
-from vehicle_nmpc.utils.config import SimConfig
 
 
 @register_simulator("acados_sim")
 class AcadosSimulator(BaseSimulator):
     """Simulator wrapper around AcadosSimSolver."""
 
-    @dataclass
-    class Config(SimConfig):
+    @dataclass(kw_only=True, slots=True)
+    class Config(BaseSimulatorConfig):
         """Acados simulator configuration."""
 
-    def __init__(self, cfg: SimConfig, problem: ProblemBundle, model: ModelBundle) -> None:
+    def __init__(self, cfg: Config, problem: ProblemBundle, model: ModelBundle) -> None:
         """Initialize Acados simulator wrapper."""
         super().__init__(cfg, problem, model)
         self._sim = None

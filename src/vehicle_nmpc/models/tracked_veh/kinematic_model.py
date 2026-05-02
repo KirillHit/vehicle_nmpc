@@ -7,17 +7,16 @@ from acados_template import AcadosModel
 from casadi import SX, cos, sin, vertcat
 from omegaconf import MISSING
 
-from vehicle_nmpc.models import BaseModel, ModelBundle, register_model
-from vehicle_nmpc.utils.config import ModelConfig
+from vehicle_nmpc.models import BaseModel, BaseModelConfig, ModelBundle, register_model
 
 
 @register_model("tracked_veh_kinematic")
 class TrackedVehKinematicModel(BaseModel):
     """Kinematic model wrapper that builds an Acados model."""
 
-    @dataclass
-    class Config(ModelConfig):
-        """Top-level model configuration."""
+    @dataclass(kw_only=True, slots=True)
+    class Config(BaseModelConfig):
+        """Tracked vehicle kinematic model configuration."""
 
         width: float = MISSING
 

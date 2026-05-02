@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -10,17 +11,26 @@ if TYPE_CHECKING:
 
     from vehicle_nmpc.models import ModelBundle
     from vehicle_nmpc.problem import ProblemBundle
-    from vehicle_nmpc.utils.config import SimConfig
 
 from vehicle_nmpc.utils.factory import ConfiguredBase
+
+
+@dataclass(kw_only=True, slots=True)
+class BaseSimulatorConfig:
+    """Base configuration for simulator implementations."""
 
 
 class BaseSimulator(ConfiguredBase, ABC):
     """Abstract simulator interface."""
 
-    Config: ClassVar[type[SimConfig]]
+    Config: ClassVar[type[BaseSimulatorConfig]] = BaseSimulatorConfig
 
-    def __init__(self, cfg: SimConfig, problem: ProblemBundle, model: ModelBundle) -> None:
+    def __init__(
+        self,
+        cfg: BaseSimulatorConfig,
+        problem: ProblemBundle,
+        model: ModelBundle,
+    ) -> None:
         """Initialize simulator with configuration, problem, and model bundles."""
         super().__init__(cfg)
         self._problem = problem

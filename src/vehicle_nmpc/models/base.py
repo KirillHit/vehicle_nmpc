@@ -10,12 +10,15 @@ if TYPE_CHECKING:
     import numpy as np
     from acados_template import AcadosModel
 
-    from vehicle_nmpc.utils.config import ModelConfig
-
 from vehicle_nmpc.utils.factory import ConfiguredBase
 
 
-@dataclass
+@dataclass(kw_only=True, slots=True)
+class BaseModelConfig:
+    """Base configuration for model implementations."""
+
+
+@dataclass(kw_only=True, slots=True)
 class ModelBundle:
     """Container with the built model and its dimensions/metadata."""
 
@@ -31,7 +34,7 @@ class ModelBundle:
 class BaseModel(ConfiguredBase, ABC):
     """Abstract base class for NMPC models."""
 
-    Config: ClassVar[type[ModelConfig]]
+    Config: ClassVar[type[BaseModelConfig]] = BaseModelConfig
 
     @abstractmethod
     def build(self) -> ModelBundle:

@@ -211,3 +211,5 @@ __marimo__/
 runs
 acados_codegen
 acados_template
+example
+.codex

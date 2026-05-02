@@ -4,22 +4,21 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from vehicle_nmpc.controller.base import BaseController
+from vehicle_nmpc.controller.base import BaseController, BaseControllerConfig
 from vehicle_nmpc.controller.builder import register_controller
 from vehicle_nmpc.models import ModelBundle
 from vehicle_nmpc.problem import ProblemBundle
-from vehicle_nmpc.utils.config import ControllerConfig
 
 
 @register_controller("rti_nmpc")
 class RtiNmpcController(BaseController):
     """Real-time iteration NMPC controller."""
 
-    @dataclass
-    class Config(ControllerConfig):
+    @dataclass(kw_only=True, slots=True)
+    class Config(BaseControllerConfig):
         """RTI NMPC controller configuration."""
 
-    def __init__(self, cfg: ControllerConfig, problem: ProblemBundle, model: ModelBundle) -> None:
+    def __init__(self, cfg: Config, problem: ProblemBundle, model: ModelBundle) -> None:
         """Initialize RTI controller with configuration, problem, and model bundles."""
         super().__init__(cfg, problem, model)
         self._solver = None
