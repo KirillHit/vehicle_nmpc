@@ -4,13 +4,10 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import asdict
-from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
-
-TBase = TypeVar("TBase")
-
 
 class ConfigSpec(Protocol):
     """Protocol for configs that can be built via registries."""
@@ -35,7 +32,7 @@ class ConfiguredBase(ABC):
         self._cfg = cfg
 
 
-def build_configured_instance(
+def build_configured_instance[TBase](
     cfg: ConfigSpec,
     registry: Mapping[str, type[TBase]],
     base_cls: type[TBase],
@@ -68,7 +65,7 @@ def build_configured_instance(
     return component_class(component_cfg, *args)
 
 
-def register_in_registry(
+def register_in_registry[TBase](
     name: str,
     registry: MutableMapping[str, type[TBase]],
     base_cls: type[TBase],

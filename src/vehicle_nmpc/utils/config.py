@@ -1,18 +1,21 @@
 """Utilities for Hydra configuration registration."""
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
 
-class RunnerMode(str, Enum):
+class RunnerMode(StrEnum):
     """Supported runner modes."""
 
     open_loop = "open_loop"
+    """Run the controller without feeding simulator state back into the control loop."""
+
     closed_loop = "closed_loop"
+    """Run the controller with simulator state feedback after each step."""
 
 
 @dataclass

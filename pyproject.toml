@@ -28,6 +28,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
+  "COM812", # Conflicts with the formatter.
+  "D203",   # Conflicts with D211.
+  "D213",   # Conflicts with D212.
   "INP001",
   "PLC0415"
 ]
