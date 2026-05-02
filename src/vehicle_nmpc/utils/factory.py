@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, Protocol
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
 
+
 class ConfigSpec(Protocol):
     """Protocol for configs that can be built via registries."""
 
