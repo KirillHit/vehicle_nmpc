@@ -54,3 +54,5 @@ RUN pip install -e acados/interfaces/acados_template
 # Export environment variables for acados libs
 ENV ACADOS_SOURCE_DIR=/workspace/acados
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/workspace/acados/lib
+
+CMD ["/bin/bash"]
