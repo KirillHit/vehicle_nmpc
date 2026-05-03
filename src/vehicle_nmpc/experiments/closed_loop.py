@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from vehicle_nmpc.metrics import EvaluationMetrics, evaluate_performance, evaluate_tracking
+
 if TYPE_CHECKING:
     from vehicle_nmpc.controller import BaseController
     from vehicle_nmpc.models import ModelBundle
@@ -20,6 +22,9 @@ log = logging.getLogger(__name__)
 @dataclass(kw_only=True, slots=True)
 class ClosedLoopResult:
     """Closed-loop rollout data."""
+
+    trajectory_name: str
+    """Name of the evaluated trajectory provider."""
 
     states: np.ndarray
     """Simulated state trajectory with shape (n_steps + 1, nx)."""
@@ -53,6 +58,15 @@ def run_evaluation(
         log.info("Finished trajectory '%s' run.", trajectory.name)
         results.append(result)
     return results
+
+
+def evaluate_result(result: ClosedLoopResult, *, dt: float) -> EvaluationMetrics:
+    """Evaluate all metrics for one closed-loop rollout."""
+    return EvaluationMetrics(
+        trajectory_name=result.trajectory_name,
+        tracking=evaluate_tracking(result, dt=dt),
+        performance=evaluate_performance(result, dt=dt),
+    )
 
 
 def _run_trajectory(
@@ -89,6 +103,7 @@ def _run_trajectory(
         states[step + 1] = simulator.step(states[step], controls[step])
 
     return ClosedLoopResult(
+        trajectory_name=trajectory.name,
         states=states,
         controls=controls,
         reference_states=reference_states,

@@ -25,6 +25,21 @@ class ProblemBundle:
 
     ocp: AcadosOcp
 
+    @property
+    def prediction_steps(self) -> int:
+        """Number of shooting intervals in the prediction horizon."""
+        return int(self.ocp.solver_options.N_horizon)
+
+    @property
+    def prediction_horizon_time(self) -> float:
+        """Prediction horizon duration in seconds."""
+        return float(self.ocp.solver_options.tf)
+
+    @property
+    def dt(self) -> float:
+        """Control period implied by the prediction horizon."""
+        return self.prediction_horizon_time / self.prediction_steps
+
 
 class BaseProblem(ConfiguredBase, ABC):
     """Abstract problem interface."""

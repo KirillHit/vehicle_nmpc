@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from vehicle_nmpc.controller import BaseController, build_controller
-from vehicle_nmpc.experiments.closed_loop import run_evaluation
+from vehicle_nmpc.experiments.closed_loop import evaluate_result, run_evaluation
 from vehicle_nmpc.models import ModelBundle, build_model
 from vehicle_nmpc.problem import ProblemBundle, build_problem
 from vehicle_nmpc.sim import BaseSimulator, build_simulator
@@ -41,18 +41,21 @@ class Runner:
 
     def _run_estimate(self, cfg: BaseConfig) -> None:
         """Evaluate one configured controller on configured tracking trajectories."""
-        model, _problem, controller, simulator, trajectories = self._prepare_run(cfg)
+        model, problem, controller, simulator, trajectories = self._prepare_run(cfg)
         if not trajectories:
             msg = "Estimate mode requires at least one configured trajectory."
             raise ValueError(msg)
 
-        run_evaluation(
+        results = run_evaluation(
             controller,
             simulator,
             model,
             trajectories,
             n_steps=cfg.runner.n_sim,
         )
+        metrics = [evaluate_result(result, dt=problem.dt) for result in results]
+        for item in metrics:
+            log.info(item.print())
 
     def _prepare_run(
         self, cfg: BaseConfig
