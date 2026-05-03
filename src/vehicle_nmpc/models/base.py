@@ -23,12 +23,19 @@ class ModelBundle:
     """Container with the built model and its dimensions/metadata."""
 
     model: AcadosModel
+    """Acados model representation."""
+
     nx: int
+    """Number of model states."""
+
     nu: int
+    """Number of model controls."""
+
     np: int
+    """Number of model parameters."""
+
     x0: np.ndarray
-    x_labels: list[str] | None = None
-    u_labels: list[str] | None = None
+    """Default initial state."""
 
 
 class BaseModel(ConfiguredBase, ABC):

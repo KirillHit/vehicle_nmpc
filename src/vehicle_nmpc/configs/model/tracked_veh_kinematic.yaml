@@ -1,3 +1,4 @@
 name: tracked_veh_kinematic
 params:
   width: 100
+  x0: [0.0, 3.141592653589793, 0.0, 0.0]

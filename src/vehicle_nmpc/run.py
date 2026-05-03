@@ -5,8 +5,8 @@ import logging
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from vehicle_nmpc.utils import Runner
 from vehicle_nmpc.utils.config import BaseConfig, register_configs
+from vehicle_nmpc.utils.runner import Runner
 
 register_configs()
 

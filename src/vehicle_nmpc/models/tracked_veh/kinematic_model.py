@@ -1,13 +1,13 @@
 """Tracked vehicle kinematic model implementation."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-import numpy as np
 from acados_template import AcadosModel
 from casadi import SX, cos, sin, vertcat
 from omegaconf import MISSING
 
 from vehicle_nmpc.models import BaseModel, BaseModelConfig, ModelBundle, register_model
+from vehicle_nmpc.utils.validation import as_vector
 
 
 @register_model("tracked_veh_kinematic")
@@ -19,6 +19,8 @@ class TrackedVehKinematicModel(BaseModel):
         """Tracked vehicle kinematic model configuration."""
 
         width: float = MISSING
+        x0: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0])
+        """Default initial state."""
 
     def __init__(self, cfg: Config) -> None:
         """Initialize the model with the provided configuration."""
@@ -90,5 +92,5 @@ class TrackedVehKinematicModel(BaseModel):
             nx=4,
             nu=1,
             np=0,
-            x0=np.array([0, 0, 0, 0], dtype=float),
+            x0=as_vector("x0", self._cfg.x0, 4),
         )

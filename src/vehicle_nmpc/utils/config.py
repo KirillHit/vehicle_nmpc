@@ -28,6 +28,8 @@ class RunnerConfig:
     seed: int = 42
     experiment_name: str = MISSING
     mode: RunnerMode = MISSING
+    n_sim: int = 100
+    """Number of closed-loop simulation steps."""
 
 
 @dataclass(kw_only=True, slots=True)
