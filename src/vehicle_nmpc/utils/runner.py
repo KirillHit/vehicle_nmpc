@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+import re
+from pathlib import Path
 
 from vehicle_nmpc.controller import BaseController, build_controller
 from vehicle_nmpc.experiments.closed_loop import evaluate_result, run_evaluation
+from vehicle_nmpc.metrics import save_trajectory_plot
 from vehicle_nmpc.models import ModelBundle, build_model
 from vehicle_nmpc.problem import ProblemBundle, build_problem
 from vehicle_nmpc.sim import BaseSimulator, build_simulator
@@ -54,7 +57,13 @@ class Runner:
             n_steps=cfg.runner.n_sim,
         )
         metrics = [evaluate_result(result, dt=problem.dt) for result in results]
-        for item in metrics:
+        for result, item in zip(results, metrics, strict=True):
+            save_trajectory_plot(
+                result.states,
+                result.reference_states,
+                self._artifact_path(cfg, "plots", result.trajectory_name, ".png"),
+                title=result.trajectory_name,
+            )
             log.info(item.print())
 
     def _prepare_run(
@@ -78,3 +87,8 @@ class Runner:
         controller.reset(model.x0)
         simulator.reset(model.x0)
         return model, problem, controller, simulator, trajectories
+
+    def _artifact_path(self, cfg: BaseConfig, group: str, name: str, suffix: str) -> Path:
+        """Return output path for a run artifact."""
+        safe_name = re.sub(r"[^a-zA-Z0-9_.-]+", "_", name).strip("_") or "artifact"
+        return Path(cfg.runner.output_dir) / group / f"{safe_name}{suffix}"

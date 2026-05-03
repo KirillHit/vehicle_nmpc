@@ -31,6 +31,12 @@ class RunnerConfig:
     n_sim: int = 100
     """Number of closed-loop simulation steps."""
 
+    output_dir: str = MISSING
+    """Directory where run artifacts are written."""
+
+    dagshub_repo_owner: str = MISSING
+    dagshub_repo_name: str = MISSING
+
 
 @dataclass(kw_only=True, slots=True)
 class FactoryConfig:

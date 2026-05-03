@@ -11,8 +11,3 @@
     speed: 0.5
     amplitude: 0.8
     wavelength: 8.0
-- name: variable_curvature
-  params:
-    speed: 0.5
-    curvature_amplitude: 0.45
-    curvature_period: 6.0
