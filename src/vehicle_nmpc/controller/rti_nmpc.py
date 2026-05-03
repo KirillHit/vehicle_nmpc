@@ -6,11 +6,11 @@ from typing import ClassVar
 import numpy as np
 from acados_template import AcadosOcpSolver
 
-from vehicle_nmpc.controller.base import BaseController, BaseControllerConfig
+from vehicle_nmpc.controller.base import BaseController, BaseControllerConfig, TrackingReference
 from vehicle_nmpc.controller.builder import register_controller
 from vehicle_nmpc.models import ModelBundle
 from vehicle_nmpc.problem import ProblemBundle
-from vehicle_nmpc.utils.validation import as_vector
+from vehicle_nmpc.utils.validation import as_matrix, as_vector
 
 
 @register_controller("rti_nmpc")
@@ -40,9 +40,10 @@ class RtiNmpcController(BaseController):
         self._set_initial_state(x0_array)
         self._stats.clear()
 
-    def solve(self, x: np.ndarray) -> np.ndarray:
-        """Solve the control problem for the given state."""
+    def solve(self, x: np.ndarray, reference: TrackingReference) -> np.ndarray:
+        """Solve the control problem for the given state and reference."""
         x_array = self._validate_state(x)
+        self._set_solver_reference(reference)
 
         self._solver.options_set("rti_phase", 1)
         preparation_status = self._solver.solve()
@@ -73,6 +74,32 @@ class RtiNmpcController(BaseController):
         """Fix the first shooting node to the measured state."""
         self._solver.set(0, "lbx", x)
         self._solver.set(0, "ubx", x)
+
+    def _set_solver_reference(self, reference: TrackingReference) -> None:
+        """Set one tracking horizon in acados reference format."""
+        x_ref = as_matrix(
+            "reference.x",
+            reference.x,
+            (self._prediction_steps + 1, self._model.nx),
+        )
+        u_ref = as_matrix(
+            "reference.u",
+            [] if reference.u is None else reference.u,
+            (self._prediction_steps, self._model.nu),
+            default=0.0,
+        )
+
+        stage_references = np.hstack((x_ref[:-1], u_ref))
+        terminal_reference = x_ref[-1]
+
+        for stage, stage_reference in enumerate(stage_references):
+            self._solver.set(stage, "yref", stage_reference)
+        self._solver.set(self._prediction_steps, "yref", terminal_reference)
+
+    @property
+    def _prediction_steps(self) -> int:
+        """Return the number of shooting intervals in the solver horizon."""
+        return int(self._problem.ocp.solver_options.N_horizon)
 
     def _validate_state(self, x: np.ndarray) -> np.ndarray:
         """Convert and validate a state vector."""

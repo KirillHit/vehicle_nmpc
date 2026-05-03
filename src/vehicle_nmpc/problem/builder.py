@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from vehicle_nmpc.models import ModelBundle
-from vehicle_nmpc.problem.base import BaseProblem
+from vehicle_nmpc.problem.base import BaseProblem, ProblemBundle
 from vehicle_nmpc.utils.config import FactoryConfig
 from vehicle_nmpc.utils.exceptions import ProblemCreationError
 from vehicle_nmpc.utils.factory import RegistrySpec, build_configured_instance, register_in_registry
@@ -22,11 +22,18 @@ PROBLEM_SPEC = RegistrySpec(
 )
 
 
-def build_problem(cfg: FactoryConfig, model: ModelBundle) -> BaseProblem:
-    """Build problem instance from registry."""
+def build_problem(cfg: FactoryConfig, model: ModelBundle) -> ProblemBundle:
+    """Build problem bundle from registry."""
     log.info("Creating problem '%s'...", cfg.name)
 
-    return build_configured_instance(cfg, PROBLEM_SPEC, dependencies={"model": model})
+    try:
+        problem = build_configured_instance(cfg, PROBLEM_SPEC, dependencies={"model": model})
+        return problem.build()
+    except ProblemCreationError:
+        raise
+    except Exception as exc:
+        msg = f"Failed to build problem '{cfg.name}': {exc}"
+        raise ProblemCreationError(msg) from exc
 
 
 def register_problem(name: str) -> Callable[[type[TProblem]], type[TProblem]]:

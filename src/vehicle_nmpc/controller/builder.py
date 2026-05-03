@@ -31,11 +31,17 @@ def build_controller(
     """Build controller instance from registry."""
     log.info("Creating controller '%s'...", cfg.name)
 
-    return build_configured_instance(
-        cfg,
-        CONTROLLER_SPEC,
-        dependencies={"problem": problem, "model": model},
-    )
+    try:
+        return build_configured_instance(
+            cfg,
+            CONTROLLER_SPEC,
+            dependencies={"problem": problem, "model": model},
+        )
+    except ControllerCreationError:
+        raise
+    except Exception as exc:
+        msg = f"Failed to build controller '{cfg.name}': {exc}"
+        raise ControllerCreationError(msg) from exc
 
 
 def register_controller(name: str) -> Callable[[type[TController]], type[TController]]:

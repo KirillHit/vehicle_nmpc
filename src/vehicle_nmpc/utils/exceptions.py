@@ -19,3 +19,7 @@ class ProblemCreationError(VehicleNMPCError):
 
 class SimulatorCreationError(VehicleNMPCError):
     """Raised when a simulator cannot be created."""
+
+
+class TrajectoryCreationError(VehicleNMPCError):
+    """Raised when a trajectory provider cannot be created."""

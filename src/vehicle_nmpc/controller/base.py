@@ -20,6 +20,17 @@ class BaseControllerConfig:
     """Base configuration for controller implementations."""
 
 
+@dataclass(kw_only=True, slots=True)
+class TrackingReference:
+    """Reference trajectory passed to a tracking controller."""
+
+    x: np.ndarray
+    """State references with shape (N + 1, nx)."""
+
+    u: np.ndarray | None = None
+    """Control references with shape (N, nu). Defaults to zeros."""
+
+
 class BaseController(ConfiguredBase, ABC):
     """Abstract controller interface."""
 
@@ -42,8 +53,8 @@ class BaseController(ConfiguredBase, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def solve(self, x: np.ndarray) -> np.ndarray:
-        """Solve the control problem for the given state."""
+    def solve(self, x: np.ndarray, reference: TrackingReference) -> np.ndarray:
+        """Solve the control problem for the given state and reference."""
         raise NotImplementedError
 
     @abstractmethod

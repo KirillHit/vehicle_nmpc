@@ -31,11 +31,17 @@ def build_simulator(
     """Build simulator instance from registry."""
     log.info("Creating simulator '%s'...", cfg.name)
 
-    return build_configured_instance(
-        cfg,
-        SIM_SPEC,
-        dependencies={"problem": problem, "model": model},
-    )
+    try:
+        return build_configured_instance(
+            cfg,
+            SIM_SPEC,
+            dependencies={"problem": problem, "model": model},
+        )
+    except SimulatorCreationError:
+        raise
+    except Exception as exc:
+        msg = f"Failed to build simulator '{cfg.name}': {exc}"
+        raise SimulatorCreationError(msg) from exc
 
 
 def register_simulator(name: str) -> Callable[[type[TSim]], type[TSim]]:

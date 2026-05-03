@@ -1,6 +1,6 @@
 """Model definitions and configuration types."""
 
-from .base import BaseModel, BaseModelConfig, ModelBundle
+from .base import BaseModel, BaseModelConfig, ModelBundle, TrajectoryReferenceModel
 from .builder import build_model, register_model
 
 # Models
@@ -11,6 +11,7 @@ __all__ = [
     "BaseModelConfig",
     "ModelBundle",
     "TrackedVehKinematicModel",
+    "TrajectoryReferenceModel",
     "build_model",
     "register_model",
 ]

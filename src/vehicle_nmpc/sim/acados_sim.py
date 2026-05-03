@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
+import numpy as np
 from acados_template import AcadosSim, AcadosSimSolver
 
 from vehicle_nmpc.sim.base import BaseSimulator, BaseSimulatorConfig
@@ -12,8 +13,6 @@ from vehicle_nmpc.sim.builder import register_simulator
 from vehicle_nmpc.utils.validation import as_vector
 
 if TYPE_CHECKING:
-    import numpy as np
-
     from vehicle_nmpc.models import ModelBundle
     from vehicle_nmpc.problem import ProblemBundle
 
@@ -33,6 +32,8 @@ class AcadosSimulator(BaseSimulator):
         """Initialize Acados simulator wrapper."""
         super().__init__(cfg, problem, model)
         sim = AcadosSim.from_ocp(self._problem.ocp)
+        if self._model.np > 0:
+            sim.parameter_values = np.asarray(self._model.p0, dtype=float)
         self._solver = AcadosSimSolver(sim, verbose=False)
 
     def reset(self, x0: np.ndarray) -> None:

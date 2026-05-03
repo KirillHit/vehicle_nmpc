@@ -49,6 +49,7 @@ class BaseConfig:
     problem: FactoryConfig = field(default_factory=FactoryConfig)
     controller: FactoryConfig = field(default_factory=FactoryConfig)
     sim: FactoryConfig = field(default_factory=FactoryConfig)
+    trajectories: list[FactoryConfig] = field(default_factory=list)
 
 
 def register_configs() -> None:

@@ -22,31 +22,25 @@ class AcadosOcpProblem(BaseProblem):
     class Config(BaseProblemConfig):
         """Acados OCP problem configuration."""
 
-        n_horizon: int = MISSING
+        prediction_steps: int = MISSING
         """Number of shooting intervals in the prediction horizon."""
 
-        tf: float = MISSING
+        prediction_horizon_time: float = MISSING
         """Prediction horizon duration in seconds."""
 
-        q: list[float] = field(default_factory=list)
+        state_weights: list[float] = field(default_factory=list)
         """Diagonal state tracking weights."""
 
-        r: list[float] = field(default_factory=list)
+        control_weights: list[float] = field(default_factory=list)
         """Diagonal control tracking weights."""
 
-        yref: list[float] = field(default_factory=list)
-        """Stage reference for stacked output [x, u]. Defaults to zeros."""
-
-        yref_e: list[float] = field(default_factory=list)
-        """Terminal reference for state output x. Defaults to zeros."""
-
-        lbu: list[float] = field(default_factory=list)
+        control_lower_bounds: list[float] = field(default_factory=list)
         """Lower bounds for selected control components."""
 
-        ubu: list[float] = field(default_factory=list)
+        control_upper_bounds: list[float] = field(default_factory=list)
         """Upper bounds for selected control components."""
 
-        idxbu: list[int] = field(default_factory=list)
+        bounded_control_indices: list[int] = field(default_factory=list)
         """Indices of bounded control components."""
 
         cost_type: str = "NONLINEAR_LS"
@@ -68,7 +62,7 @@ class AcadosOcpProblem(BaseProblem):
         """Number of Newton iterations for implicit simulation methods."""
 
         qp_solver_cond_n: int | None = None
-        """Partial condensing horizon. Defaults to n_horizon."""
+        """Partial condensing horizon. Defaults to prediction_steps."""
 
         translate_nls_cost_to_conl: bool = True
         """Translate nonlinear least-squares cost to convex-over-nonlinear cost."""
@@ -81,8 +75,8 @@ class AcadosOcpProblem(BaseProblem):
         """Build and return the Acados OCP problem bundle."""
         ocp = AcadosOcp()
         ocp.model = self._model.model
-        ocp.solver_options.N_horizon = self._cfg.n_horizon
-        ocp.solver_options.tf = self._cfg.tf
+        ocp.solver_options.N_horizon = self._cfg.prediction_steps
+        ocp.solver_options.tf = self._cfg.prediction_horizon_time
 
         self._set_tracking_cost(ocp)
         self._set_control_bounds(ocp)
@@ -96,44 +90,61 @@ class AcadosOcpProblem(BaseProblem):
         nu = self._model.nu
         ny = nx + nu
 
-        q = as_vector("q", self._cfg.q, nx)
-        r = as_vector("r", self._cfg.r, nu)
+        state_weights = as_vector("state_weights", self._cfg.state_weights, nx)
+        control_weights = as_vector("control_weights", self._cfg.control_weights, nu)
 
         ocp.cost.cost_type = self._cfg.cost_type
         ocp.cost.cost_type_e = self._cfg.cost_type_e
-        ocp.cost.W = scipy.linalg.block_diag(np.diag(q), np.diag(r))
-        ocp.cost.W_e = np.diag(q)
+        ocp.cost.W = scipy.linalg.block_diag(
+            np.diag(state_weights),
+            np.diag(control_weights),
+        )
+        ocp.cost.W_e = np.diag(state_weights)
 
         ocp.model.cost_y_expr = vertcat(self._model.model.x, self._model.model.u)
         ocp.model.cost_y_expr_e = self._model.model.x
-        ocp.cost.yref = as_vector("yref", self._cfg.yref, ny, default=0.0)
-        ocp.cost.yref_e = as_vector("yref_e", self._cfg.yref_e, nx, default=0.0)
+        ocp.cost.yref = np.zeros(ny)
+        ocp.cost.yref_e = np.zeros(nx)
 
         if self._cfg.translate_nls_cost_to_conl:
             ocp.translate_nls_cost_to_conl()
 
     def _set_control_bounds(self, ocp: AcadosOcp) -> None:
         """Configure bounds for selected control components."""
-        if not self._cfg.idxbu and not self._cfg.lbu and not self._cfg.ubu:
+        if (
+            not self._cfg.bounded_control_indices
+            and not self._cfg.control_lower_bounds
+            and not self._cfg.control_upper_bounds
+        ):
             return
 
-        n_bounded_controls = len(self._cfg.idxbu)
+        n_bounded_controls = len(self._cfg.bounded_control_indices)
         if n_bounded_controls == 0:
-            msg = "Control bounds require non-empty idxbu."
+            msg = "Control bounds require non-empty bounded_control_indices."
             raise ValueError(msg)
 
         ocp.constraints.idxbu = as_vector(
-            "idxbu",
-            self._cfg.idxbu,
+            "bounded_control_indices",
+            self._cfg.bounded_control_indices,
             n_bounded_controls,
             dtype=int,
         )
-        ocp.constraints.lbu = as_vector("lbu", self._cfg.lbu, n_bounded_controls)
-        ocp.constraints.ubu = as_vector("ubu", self._cfg.ubu, n_bounded_controls)
+        ocp.constraints.lbu = as_vector(
+            "control_lower_bounds",
+            self._cfg.control_lower_bounds,
+            n_bounded_controls,
+        )
+        ocp.constraints.ubu = as_vector(
+            "control_upper_bounds",
+            self._cfg.control_upper_bounds,
+            n_bounded_controls,
+        )
 
     def _set_solver_options(self, ocp: AcadosOcp) -> None:
         """Configure acados solver options shared by RTI and tracking problems."""
         ocp.constraints.x0 = np.asarray(self._model.x0, dtype=float)
+        if self._model.np > 0:
+            ocp.parameter_values = np.asarray(self._model.p0, dtype=float)
         ocp.solver_options.qp_solver = self._cfg.qp_solver
         ocp.solver_options.hessian_approx = self._cfg.hessian_approx
         ocp.solver_options.integrator_type = self._cfg.integrator_type
@@ -141,5 +152,5 @@ class AcadosOcpProblem(BaseProblem):
         ocp.solver_options.qp_solver_cond_N = (
             self._cfg.qp_solver_cond_n
             if self._cfg.qp_solver_cond_n is not None
-            else self._cfg.n_horizon
+            else self._cfg.prediction_steps
         )

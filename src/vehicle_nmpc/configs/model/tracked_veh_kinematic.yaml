@@ -1,4 +1,10 @@
 name: tracked_veh_kinematic
 params:
-  width: 100
-  x0: [0.0, 3.141592653589793, 0.0, 0.0]
+  sprocket_radius: 0.12
+  track_width: 0.8
+  track_contact_length: 1.0
+  left_slip: 0.0
+  right_slip: 0.0
+  lateral_resistance: 0.8
+  gravity: 9.81
+  x0: [0.0, 0.0, 0.0]

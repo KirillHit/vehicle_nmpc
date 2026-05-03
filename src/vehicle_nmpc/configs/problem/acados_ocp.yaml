@@ -1,12 +1,12 @@
 name: acados_ocp
 params:
-  n_horizon: 40
-  tf: 0.8
-  q: [2000.0, 2000.0, 0.02, 0.02]
-  r: [0.02]
-  lbu: [-80.0]
-  ubu: [80.0]
-  idxbu: [0]
+  prediction_steps: 40
+  prediction_horizon_time: 0.8
+  state_weights: [20.0, 20.0, 2.0]
+  control_weights: [0.05, 0.05]
+  control_lower_bounds: [-20.0, -20.0]
+  control_upper_bounds: [20.0, 20.0]
+  bounded_control_indices: [0, 1]
   qp_solver: PARTIAL_CONDENSING_HPIPM
   hessian_approx: GAUSS_NEWTON
   integrator_type: IRK

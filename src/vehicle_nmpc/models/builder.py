@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from typing import TypeVar
 
-from vehicle_nmpc.models.base import BaseModel
+from vehicle_nmpc.models.base import BaseModel, ModelBundle
 from vehicle_nmpc.utils.config import FactoryConfig
 from vehicle_nmpc.utils.exceptions import ModelCreationError
 from vehicle_nmpc.utils.factory import RegistrySpec, build_configured_instance, register_in_registry
@@ -22,11 +22,18 @@ MODEL_SPEC = RegistrySpec(
 )
 
 
-def build_model(cfg: FactoryConfig) -> BaseModel:
-    """Build model instance from registry."""
+def build_model(cfg: FactoryConfig) -> ModelBundle:
+    """Build model bundle from registry."""
     log.info("Creating model '%s'...", cfg.name)
 
-    return build_configured_instance(cfg, MODEL_SPEC)
+    try:
+        model = build_configured_instance(cfg, MODEL_SPEC)
+        return model.build()
+    except ModelCreationError:
+        raise
+    except Exception as exc:
+        msg = f"Failed to build model '{cfg.name}': {exc}"
+        raise ModelCreationError(msg) from exc
 
 
 def register_model(name: str) -> Callable[[type[TModel]], type[TModel]]:
