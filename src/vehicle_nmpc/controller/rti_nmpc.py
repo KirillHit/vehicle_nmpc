@@ -31,7 +31,11 @@ class RtiNmpcController(BaseController):
         """Initialize RTI controller with configuration, problem, and model bundles."""
         super().__init__(cfg, problem, model)
         self._problem.ocp.solver_options.nlp_solver_type = self._NLP_SOLVER_TYPE
-        self._solver = AcadosOcpSolver(self._problem.ocp, verbose=False)
+        self._solver = AcadosOcpSolver(
+            self._problem.ocp,
+            json_file=self._problem.ocp.json_file,
+            verbose=False,
+        )
         self._stats: dict[str, float | int] = {}
 
     def reset(self, x0: np.ndarray) -> None:

@@ -1,6 +1,7 @@
 """Acados OCP problem formulation."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 import scipy.linalg
@@ -27,6 +28,9 @@ class AcadosOcpProblem(BaseProblem):
 
         prediction_horizon_time: float = MISSING
         """Prediction horizon duration in seconds."""
+
+        artifacts_dir: str = MISSING
+        """Directory where acados OCP artifacts are generated."""
 
         state_weights: list[float] = field(default_factory=list)
         """Diagonal state tracking weights."""
@@ -78,11 +82,18 @@ class AcadosOcpProblem(BaseProblem):
         ocp.solver_options.N_horizon = self._cfg.prediction_steps
         ocp.solver_options.tf = self._cfg.prediction_horizon_time
 
+        self._set_artifacts(ocp)
         self._set_tracking_cost(ocp)
         self._set_control_bounds(ocp)
         self._set_solver_options(ocp)
 
         return ProblemBundle(ocp=ocp)
+
+    def _set_artifacts(self, ocp: AcadosOcp) -> None:
+        """Configure generated acados OCP artifacts."""
+        artifacts_dir = Path(self._cfg.artifacts_dir)
+        ocp.code_export_directory = str(artifacts_dir / "generated_code")
+        ocp.json_file = str(artifacts_dir / "acados_ocp.json")
 
     def _set_tracking_cost(self, ocp: AcadosOcp) -> None:
         """Configure a generic tracking cost over states and controls."""
