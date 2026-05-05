@@ -34,9 +34,6 @@ class RunnerConfig:
     output_dir: str = MISSING
     """Directory where run artifacts are written."""
 
-    dagshub_repo_owner: str = MISSING
-    dagshub_repo_name: str = MISSING
-
 
 @dataclass(kw_only=True, slots=True)
 class FactoryConfig:
@@ -44,6 +41,68 @@ class FactoryConfig:
 
     name: str = MISSING
     params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(kw_only=True, slots=True)
+class OptunaParameter:
+    """Definition of a single hyperparameter to optimize and its search space."""
+
+    parameter: str = MISSING
+    """Full path to the parameter in the config."""
+
+    type: str = "float"
+    """Parameter type: float, int, or categorical."""
+
+    low: float | None = None
+    """Lower bound for float and int parameters."""
+
+    high: float | None = None
+    """Upper bound for float and int parameters."""
+
+    log: bool = False
+    """Whether to sample a float parameter on a log scale."""
+
+    choices: list[Any] | None = None
+    """Allowed values for categorical parameters."""
+
+
+@dataclass(kw_only=True, slots=True)
+class ObjectiveComponent:
+    """Weighted metric component used to build an Optuna objective."""
+
+    metric: str = MISSING
+    """Dotted path to a field in EvaluationMetrics."""
+
+    aggregation: str = "mean"
+    """Aggregation over evaluated trajectories: mean, max, min, or sum."""
+
+    weight: float = 1.0
+    """Multiplier applied to the aggregated metric value."""
+
+
+@dataclass(kw_only=True, slots=True)
+class OptunaObjective:
+    """Composite Optuna objective configuration."""
+
+    direction: str = "minimize"
+    """Optimization direction passed to Optuna."""
+
+    components: list[ObjectiveComponent] = field(default_factory=list)
+    """Weighted metric components summed into one scalar objective."""
+
+
+@dataclass(kw_only=True, slots=True)
+class OptunaConfig:
+    """Optuna optimization configuration."""
+
+    n_trials: int = 50
+    """Number of trials to run."""
+
+    parameters: list[OptunaParameter] = field(default_factory=list)
+    """Hyperparameters optimized by Optuna."""
+
+    objective: OptunaObjective = field(default_factory=OptunaObjective)
+    """Scalar objective assembled from configured metric components."""
 
 
 @dataclass(kw_only=True, slots=True)
@@ -56,6 +115,7 @@ class BaseConfig:
     controller: FactoryConfig = field(default_factory=FactoryConfig)
     sim: FactoryConfig = field(default_factory=FactoryConfig)
     trajectories: list[FactoryConfig] = field(default_factory=list)
+    optuna: OptunaConfig = field(default_factory=OptunaConfig)
 
 
 def register_configs() -> None:

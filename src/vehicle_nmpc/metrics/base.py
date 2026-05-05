@@ -76,6 +76,32 @@ class PerformanceMetrics:
 
 
 @dataclass(kw_only=True, slots=True)
+class ControlMetrics:
+    """Control smoothness metrics."""
+
+    mean_squared_delta_left_control: float
+    """Mean squared left track speed increment."""
+
+    mean_squared_delta_right_control: float
+    """Mean squared right track speed increment."""
+
+    sum_squared_delta_left_control: float
+    """Sum of squared left track speed increments."""
+
+    sum_squared_delta_right_control: float
+    """Sum of squared right track speed increments."""
+
+    max_abs_delta_left_control: float
+    """Maximum absolute left track speed increment."""
+
+    max_abs_delta_right_control: float
+    """Maximum absolute right track speed increment."""
+
+    mean_squared_delta_control: float
+    """Mean squared increment over all control components."""
+
+
+@dataclass(kw_only=True, slots=True)
 class EvaluationMetrics:
     """All metrics for one closed-loop rollout."""
 
@@ -88,6 +114,9 @@ class EvaluationMetrics:
     performance: PerformanceMetrics
     """Controller runtime metrics."""
 
+    control: ControlMetrics
+    """Control smoothness metrics."""
+
     def print(self) -> str:
         """Return a compact human-readable metric summary."""
         return (
@@ -98,5 +127,6 @@ class EvaluationMetrics:
             f"mean_solve={self.performance.mean_solve_time:.4g} s, "
             f"max_solve={self.performance.max_solve_time:.4g} s, "
             f"rtf_mean={self.performance.real_time_factor_mean:.4g}, "
-            f"rtf_max={self.performance.real_time_factor_max:.4g}"
+            f"rtf_max={self.performance.real_time_factor_max:.4g}, "
+            f"mean_du2={self.control.mean_squared_delta_control:.4g}"
         )

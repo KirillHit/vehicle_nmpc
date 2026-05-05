@@ -1,0 +1,62 @@
+n_trials: 12
+parameters:
+  - parameter: problem.params.prediction_horizon_time
+    type: float
+    low: 0.4
+    high: 1.6
+  - parameter: problem.params.state_weights.0
+    type: float
+    low: 1.0
+    high: 100.0
+    log: true
+  - parameter: problem.params.state_weights.1
+    type: float
+    low: 1.0
+    high: 100.0
+    log: true
+  - parameter: problem.params.state_weights.2
+    type: float
+    low: 0.1
+    high: 20.0
+    log: true
+  - parameter: problem.params.control_weights.0
+    type: float
+    low: 0.001
+    high: 1.0
+    log: true
+  - parameter: problem.params.control_weights.1
+    type: float
+    low: 0.001
+    high: 1.0
+    log: true
+  - parameter: problem.params.control_lower_bounds.0
+    type: float
+    low: -30.0
+    high: -5.0
+  - parameter: problem.params.control_lower_bounds.1
+    type: float
+    low: -30.0
+    high: -5.0
+  - parameter: problem.params.control_upper_bounds.0
+    type: float
+    low: 5.0
+    high: 30.0
+  - parameter: problem.params.control_upper_bounds.1
+    type: float
+    low: 5.0
+    high: 30.0
+objective:
+  direction: minimize
+  components:
+    - metric: tracking.rmse_lateral_error
+      aggregation: mean
+      weight: 1.0
+    - metric: tracking.max_abs_lateral_error
+      aggregation: max
+      weight: 0.5
+    - metric: tracking.mean_abs_heading_error
+      aggregation: mean
+      weight: 0.3
+    - metric: performance.mean_solve_time
+      aggregation: mean
+      weight: 0.05

@@ -3,5 +3,3 @@ experiment_name: test
 mode: estimate
 n_sim: 1000
 output_dir: ${hydra:runtime.output_dir}
-dagshub_repo_owner: ${oc.env:DAGSHUB_REPO_OWNER,KirillHit}
-dagshub_repo_name: ${oc.env:DAGSHUB_REPO_NAME,spiking_rl_lab}

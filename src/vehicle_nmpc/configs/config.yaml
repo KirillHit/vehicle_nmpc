@@ -5,6 +5,7 @@ defaults:
   - sim: acados_sim
   - runner: base
   - controller: rti_nmpc
+  - optuna: base
   - trajectories: tracking_suite
   - override hydra/job_logging: colorlog
   - _self_
