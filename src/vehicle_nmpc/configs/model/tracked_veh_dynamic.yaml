@@ -1,0 +1,14 @@
+name: tracked_veh_dynamic
+params:
+  sprocket_radius: 0.12
+  track_width: 0.8
+  track_contact_length: 1.0
+  left_slip: 0.0
+  right_slip: 0.0
+  longitudinal_resistance: 0.1
+  lateral_resistance: 0.8
+  gravity: 9.81
+  mass: 1000.0
+  inertia: 500.0
+  drive_force_coefficient: 1000.0
+  x0: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
