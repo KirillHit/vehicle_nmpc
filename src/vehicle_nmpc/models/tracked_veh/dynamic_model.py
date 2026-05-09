@@ -244,5 +244,4 @@ class TrackedVehDynamicModel(BaseModel):
                 left_slip=self._cfg.left_slip,
                 right_slip=self._cfg.right_slip,
             ),
-        )
-    
+        )   

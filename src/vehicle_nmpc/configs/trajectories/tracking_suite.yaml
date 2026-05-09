@@ -11,3 +11,16 @@
     speed: 0.5
     amplitude: 0.8
     wavelength: 8.0
+
+- name: figure_eight
+  params:
+    speed: 0.5
+    scale: 4.0
+
+- name: saw
+  params:
+    straight_speed: 0.5
+    straight_length: 2.0
+    turn_angle: 1.047197551
+    turn_speed: 1.0
+    initial_heading: 0.0

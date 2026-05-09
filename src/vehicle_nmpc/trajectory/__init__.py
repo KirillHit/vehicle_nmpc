@@ -6,11 +6,15 @@ from .providers import (
     SCurveTrajectoryProvider,
     StraightTrajectoryProvider,
     TurnTrajectoryProvider,
+    SawTrajectoryProvider,
+    FigureEightTrajectoryProvider,
 )
 
 __all__ = [
     "BaseTrajectoryConfig",
     "BaseTrajectoryProvider",
+    "FigureEightTrajectoryProvider",
+    "SawTrajectoryProvider",
     "SCurveTrajectoryProvider",
     "StraightTrajectoryProvider",
     "TurnTrajectoryProvider",
