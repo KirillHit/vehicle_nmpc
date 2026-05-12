@@ -84,7 +84,7 @@ class TrackedVehDynamicModel(BaseModel):
         """Initialize the model with the provided configuration."""
         super().__init__(cfg)
 
-    def build(self) -> ModelBundle:
+    def build(self) -> ModelBundle: # noqa: PLR0915
         """Build and return the Acados model bundle."""
         model_name = "tracked_veh_dynamic"
 
@@ -152,7 +152,8 @@ class TrackedVehDynamicModel(BaseModel):
         yaw_rate_cmd = delta_speed / (track_width + eps)
 
         tan_beta = (
-            track_contact_length * yaw_rate_cmd * yaw_rate_cmd / (2.0 * lateral_resistance * gravity)
+            track_contact_length * yaw_rate_cmd * yaw_rate_cmd
+            / (2.0 * lateral_resistance * gravity)
         )
         cos_beta = 1.0 / sqrt(1.0 + tan_beta * tan_beta)
         sin_beta = tan_beta * cos_beta
@@ -162,7 +163,8 @@ class TrackedVehDynamicModel(BaseModel):
         a_c = speed * speed / (radius_prime + eps)
 
         f_y = (
-            sign(yaw_rate) * yaw_rate * yaw_rate * lateral_resistance * mass * gravity * s0 / track_contact_length
+            sign(yaw_rate) * yaw_rate * yaw_rate * lateral_resistance * mass * gravity * s0
+            / track_contact_length
         )
 
         f_l = drive_force_coefficient * left_track_speed
@@ -234,4 +236,4 @@ class TrackedVehDynamicModel(BaseModel):
                 left_slip=self._cfg.left_slip,
                 right_slip=self._cfg.right_slip,
             ),
-        )   
+        )
