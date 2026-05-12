@@ -19,5 +19,5 @@ __all__ = [
     "StraightTrajectoryProvider",
     "TurnTrajectoryProvider",
     "build_trajectory",
-    "register_trajectory"
+    "register_trajectory",
 ]

@@ -135,7 +135,9 @@ class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
         times = self._times(step)
         a = self._cfg.scale
         t_dense = np.linspace(0, 2 * np.pi, 2000)
-        ds = np.sqrt(np.cos(t_dense)**2 + np.cos(2*t_dense)**2) * a * (t_dense[1] - t_dense[0])
+        ds = (
+            np.sqrt(np.cos(t_dense) ** 2 + np.cos(2 * t_dense) ** 2) * a * (t_dense[1] - t_dense[0])
+        )
         s_dense = np.cumsum(np.insert(ds[:-1], 0, 0))
         s_horizon = (step * self._dt + times - times[0]) * self._cfg.speed
         t = np.interp(np.mod(s_horizon, s_dense[-1]), s_dense, t_dense)

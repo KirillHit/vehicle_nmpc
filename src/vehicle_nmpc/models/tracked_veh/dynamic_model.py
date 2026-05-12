@@ -84,7 +84,7 @@ class TrackedVehDynamicModel(BaseModel):
         """Initialize the model with the provided configuration."""
         super().__init__(cfg)
 
-    def build(self) -> ModelBundle: # noqa: PLR0915
+    def build(self) -> ModelBundle:  # noqa: PLR0915
         """Build and return the Acados model bundle."""
         model_name = "tracked_veh_dynamic"
 
@@ -152,7 +152,9 @@ class TrackedVehDynamicModel(BaseModel):
         yaw_rate_cmd = delta_speed / (track_width + eps)
 
         tan_beta = (
-            track_contact_length * yaw_rate_cmd * yaw_rate_cmd
+            track_contact_length
+            * yaw_rate_cmd
+            * yaw_rate_cmd
             / (2.0 * lateral_resistance * gravity)
         )
         cos_beta = 1.0 / sqrt(1.0 + tan_beta * tan_beta)
@@ -163,7 +165,13 @@ class TrackedVehDynamicModel(BaseModel):
         a_c = speed * speed / (radius_prime + eps)
 
         f_y = (
-            sign(yaw_rate) * yaw_rate * yaw_rate * lateral_resistance * mass * gravity * s0
+            sign(yaw_rate)
+            * yaw_rate
+            * yaw_rate
+            * lateral_resistance
+            * mass
+            * gravity
+            * s0
             / track_contact_length
         )
 
@@ -172,7 +180,11 @@ class TrackedVehDynamicModel(BaseModel):
         m = (f_r - f_l) * track_width / 2.0
 
         m_r = (
-            sign(yaw_rate) * lateral_resistance * mass * gravity / track_contact_length
+            sign(yaw_rate)
+            * lateral_resistance
+            * mass
+            * gravity
+            / track_contact_length
             * (s0 * s0 - (track_contact_length * track_contact_length) / 4.0)
         )
 
