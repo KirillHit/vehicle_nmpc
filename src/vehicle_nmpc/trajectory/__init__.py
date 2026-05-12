@@ -3,19 +3,19 @@
 from .base import BaseTrajectoryConfig, BaseTrajectoryProvider
 from .builder import build_trajectory, register_trajectory
 from .providers import (
+    FigureEightTrajectoryProvider,
+    SawTrajectoryProvider,
     SCurveTrajectoryProvider,
     StraightTrajectoryProvider,
     TurnTrajectoryProvider,
-    SawTrajectoryProvider,
-    FigureEightTrajectoryProvider,
 )
 
 __all__ = [
     "BaseTrajectoryConfig",
     "BaseTrajectoryProvider",
     "FigureEightTrajectoryProvider",
-    "SawTrajectoryProvider",
     "SCurveTrajectoryProvider",
+    "SawTrajectoryProvider",
     "StraightTrajectoryProvider",
     "TurnTrajectoryProvider",
     "build_trajectory",

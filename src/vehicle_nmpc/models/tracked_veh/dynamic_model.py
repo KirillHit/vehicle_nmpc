@@ -84,7 +84,7 @@ class TrackedVehDynamicModel(BaseModel):
         """Initialize the model with the provided configuration."""
         super().__init__(cfg)
 
-    def build(self) -> ModelBundle:
+    def build(self) -> ModelBundle:  # noqa: PLR0915
         """Build and return the Acados model bundle."""
         model_name = "tracked_veh_dynamic"
 
@@ -155,7 +155,9 @@ class TrackedVehDynamicModel(BaseModel):
 
         # Equation (9): lateral slip geometry
         tan_beta = (
-            track_contact_length * yaw_rate_cmd * yaw_rate_cmd
+            track_contact_length
+            * yaw_rate_cmd
+            * yaw_rate_cmd
             / (2.0 * lateral_resistance * gravity)
         )
         cos_beta = 1.0 / sqrt(1.0 + tan_beta * tan_beta)
@@ -168,8 +170,14 @@ class TrackedVehDynamicModel(BaseModel):
 
         # Equation (15): transverse friction force
         f_y = (
-            sign(yaw_rate) * yaw_rate * yaw_rate * lateral_resistance * mass
-            * gravity * s0 / track_contact_length
+            sign(yaw_rate)
+            * yaw_rate
+            * yaw_rate
+            * lateral_resistance
+            * mass
+            * gravity
+            * s0
+            / track_contact_length
         )
 
         # Equation (16): driving moment
@@ -179,7 +187,10 @@ class TrackedVehDynamicModel(BaseModel):
 
         # Equation (17): rotational resistance moment
         m_r = (
-            sign(yaw_rate) * lateral_resistance * mass * gravity
+            sign(yaw_rate)
+            * lateral_resistance
+            * mass
+            * gravity
             / track_contact_length
             * (s0 * s0 - (track_contact_length * track_contact_length) / 4.0)
         )
@@ -244,4 +255,4 @@ class TrackedVehDynamicModel(BaseModel):
                 left_slip=self._cfg.left_slip,
                 right_slip=self._cfg.right_slip,
             ),
-        )   
+        )

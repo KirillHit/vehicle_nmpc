@@ -126,13 +126,18 @@ class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
 
     @dataclass(kw_only=True, slots=True)
     class Config(ConstantSpeedConfig):
+        """Figure-eight trajectory configuration."""
+
         scale: float = 4.0
 
     def reference_at(self, step: int) -> TrackingReference:
+        """Return a figure-eight tracking reference horizon."""
         times = self._times(step)
         a = self._cfg.scale
         t_dense = np.linspace(0, 2 * np.pi, 2000)
-        ds = np.sqrt(np.cos(t_dense)**2 + np.cos(2*t_dense)**2) * a * (t_dense[1] - t_dense[0])
+        ds = (
+            np.sqrt(np.cos(t_dense) ** 2 + np.cos(2 * t_dense) ** 2) * a * (t_dense[1] - t_dense[0])
+        )
         s_dense = np.cumsum(np.insert(ds[:-1], 0, 0))
         s_horizon = (step * self._dt + times - times[0]) * self._cfg.speed
         t = np.interp(np.mod(s_horizon, s_dense[-1]), s_dense, t_dense)
@@ -142,7 +147,9 @@ class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
         yaw = np.arctan2(a * cos_2t, a * cos_t)
         dx, dy = a * cos_t, a * cos_2t
         ddx, ddy = -a * sin_t, -2 * a * np.sin(2 * t)
-        curvature = (dx[:-1] * ddy[:-1] - dy[:-1] * ddx[:-1]) / np.maximum((dx[:-1]**2 + dy[:-1]**2)**1.5, 1e-6)
+        curvature = (dx[:-1] * ddy[:-1] - dy[:-1] * ddx[:-1]) / np.maximum(
+            (dx[:-1] ** 2 + dy[:-1] ** 2) ** 1.5, 1e-6
+        )
         speed = np.full(self._prediction_steps, self._cfg.speed)
         u_ref = self._control_reference(speed, speed * curvature)
         return TrackingReference(x=np.column_stack((x, y, yaw)), u=u_ref)
@@ -154,6 +161,8 @@ class SawTrajectoryProvider(BaseTrajectoryProvider):
 
     @dataclass(kw_only=True, slots=True)
     class Config(BaseTrajectoryConfig):
+        """Saw trajectory configuration."""
+
         straight_speed: float = 0.5
         straight_length: float = 2.0
         turn_angle: float = np.pi / 3
@@ -161,26 +170,26 @@ class SawTrajectoryProvider(BaseTrajectoryProvider):
         initial_heading: float = 0.0
 
     def reference_at(self, step: int) -> TrackingReference:
+        """Return a saw-tooth tracking reference horizon."""
         times = self._times(step)
-        N = self._prediction_steps
-        v, L = self._cfg.straight_speed, self._cfg.straight_length
+        v, s_l = self._cfg.straight_speed, self._cfg.straight_length
         w, dtheta = self._cfg.turn_speed, self._cfg.turn_angle
-        t_s, t_t = L / v, abs(dtheta) / w
+        t_s, t_t = s_l / v, abs(dtheta) / w
         t_seg = t_s + t_t
 
-        def state_at(t):
+        def state_at(t: float) -> tuple[float, float, float]:
             """x, y, heading at time t."""
             n = int(t // t_seg)
             dt = t - n * t_seg
-            x = n * L * np.cos(self._cfg.initial_heading)
-            y = n * L * np.sin(self._cfg.initial_heading)
+            x = n * s_l * np.cos(self._cfg.initial_heading)
+            y = n * s_l * np.sin(self._cfg.initial_heading)
             h = self._cfg.initial_heading + n * dtheta
             if dt < t_s:
                 x += v * dt * np.cos(h)
                 y += v * dt * np.sin(h)
             else:
-                x += L * np.cos(h)
-                y += L * np.sin(h)
+                x += s_l * np.cos(h)
+                y += s_l * np.sin(h)
                 h += np.sign(dtheta) * w * (dt - t_s)
             return x, y, h
 
