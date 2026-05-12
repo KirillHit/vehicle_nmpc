@@ -142,45 +142,35 @@ class TrackedVehDynamicModel(BaseModel):
         left_track_speed = sprocket_radius * omega_l * (1.0 - left_slip)
         right_track_speed = sprocket_radius * omega_r * (1.0 - right_slip)
 
-        # Equation (12): longitudinal resistance forces
         r_l = longitudinal_resistance * mass * gravity / 2.0
         r_r = r_l
 
-        # Equation (7) and (8): turning radius and yaw rate
         delta_speed = right_track_speed - left_track_speed
         sum_speed = right_track_speed + left_track_speed
         eps = 1e-6
         radius_prime = track_width * sum_speed / (2.0 * (delta_speed + eps))
         yaw_rate_cmd = delta_speed / (track_width + eps)
 
-        # Equation (9): lateral slip geometry
         tan_beta = (
-            track_contact_length * yaw_rate_cmd * yaw_rate_cmd
-            / (2.0 * lateral_resistance * gravity)
+            track_contact_length * yaw_rate_cmd * yaw_rate_cmd / (2.0 * lateral_resistance * gravity)
         )
         cos_beta = 1.0 / sqrt(1.0 + tan_beta * tan_beta)
         sin_beta = tan_beta * cos_beta
         s0 = radius_prime * tan_beta
 
-        # Equation (13): centripetal acceleration
         speed = sqrt(vel_x * vel_x + vel_y * vel_y)
         a_c = speed * speed / (radius_prime + eps)
 
-        # Equation (15): transverse friction force
         f_y = (
-            sign(yaw_rate) * yaw_rate * yaw_rate * lateral_resistance * mass
-            * gravity * s0 / track_contact_length
+            sign(yaw_rate) * yaw_rate * yaw_rate * lateral_resistance * mass * gravity * s0 / track_contact_length
         )
 
-        # Equation (16): driving moment
         f_l = drive_force_coefficient * left_track_speed
         f_r = drive_force_coefficient * right_track_speed
         m = (f_r - f_l) * track_width / 2.0
 
-        # Equation (17): rotational resistance moment
         m_r = (
-            sign(yaw_rate) * lateral_resistance * mass * gravity
-            / track_contact_length
+            sign(yaw_rate) * lateral_resistance * mass * gravity / track_contact_length
             * (s0 * s0 - (track_contact_length * track_contact_length) / 4.0)
         )
 
