@@ -166,8 +166,7 @@ class TrackedVehDynamicModel(BaseModel):
 
         f_y = (
             sign(yaw_rate)
-            * yaw_rate
-            * yaw_rate
+            * 2.0
             * lateral_resistance
             * mass
             * gravity
