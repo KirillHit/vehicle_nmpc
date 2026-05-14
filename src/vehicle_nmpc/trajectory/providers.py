@@ -129,29 +129,27 @@ class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
         """Figure-eight trajectory configuration."""
 
         scale: float = 4.0
+        lap_time: float = 8.0
 
     def reference_at(self, step: int) -> TrackingReference:
-        """Return a figure-eight tracking reference horizon."""
         times = self._times(step)
         a = self._cfg.scale
-        t_dense = np.linspace(0, 2 * np.pi, 2000)
-        ds = (
-            np.sqrt(np.cos(t_dense) ** 2 + np.cos(2 * t_dense) ** 2) * a * (t_dense[1] - t_dense[0])
-        )
-        s_dense = np.cumsum(np.insert(ds[:-1], 0, 0))
-        s_horizon = (step * self._dt + times - times[0]) * self._cfg.speed
-        t = np.interp(np.mod(s_horizon, s_dense[-1]), s_dense, t_dense)
-        sin_t, cos_t = np.sin(t), np.cos(t)
+        
+        phase = 2 * np.pi * step * self._dt * self._cfg.speed / (4 * a)
+        t = phase + times * self._cfg.speed / a
+        
+        sin_t = np.sin(t)
+        cos_t = np.cos(t)
         cos_2t = np.cos(2 * t)
-        x, y = a * sin_t, a * sin_t * cos_t
-        yaw = np.arctan2(a * cos_2t, a * cos_t)
-        dx, dy = a * cos_t, a * cos_2t
-        ddx, ddy = -a * sin_t, -2 * a * np.sin(2 * t)
-        curvature = (dx[:-1] * ddy[:-1] - dy[:-1] * ddx[:-1]) / np.maximum(
-            (dx[:-1] ** 2 + dy[:-1] ** 2) ** 1.5, 1e-6
-        )
+        
+        x = a * sin_t
+        y = a * sin_t * cos_t
+        yaw = np.arctan2(cos_2t, cos_t)
+        
         speed = np.full(self._prediction_steps, self._cfg.speed)
-        u_ref = self._control_reference(speed, speed * curvature)
+        yaw_rate = np.zeros(self._prediction_steps)  
+        u_ref = self._control_reference(speed, yaw_rate) 
+        
         return TrackingReference(x=np.column_stack((x, y, yaw)), u=u_ref)
 
 
@@ -172,34 +170,72 @@ class SawTrajectoryProvider(BaseTrajectoryProvider):
     def reference_at(self, step: int) -> TrackingReference:
         """Return a saw-tooth tracking reference horizon."""
         times = self._times(step)
-        v, s_l = self._cfg.straight_speed, self._cfg.straight_length
-        w, dtheta = self._cfg.turn_speed, self._cfg.turn_angle
-        t_s, t_t = s_l / v, abs(dtheta) / w
-        t_seg = t_s + t_t
+        v = self._cfg.straight_speed
+        theta = self._cfg.turn_angle
+        base_length = self._cfg.straight_length
+
+        # diagonal segment length along the reference path
+        half_base = base_length / 2.0
+        diag_length = half_base / np.cos(theta)
+        path_period = 2.0 * diag_length / v
 
         def state_at(t: float) -> tuple[float, float, float]:
             """x, y, heading at time t."""
-            n = int(t // t_seg)
-            dt = t - n * t_seg
-            x = n * s_l * np.cos(self._cfg.initial_heading)
-            y = n * s_l * np.sin(self._cfg.initial_heading)
-            h = self._cfg.initial_heading + n * dtheta
-            if dt < t_s:
-                x += v * dt * np.cos(h)
-                y += v * dt * np.sin(h)
+            tooth_index = int(t // path_period)
+            tau = t - tooth_index * path_period
+            x0 = tooth_index * base_length
+            if tau < diag_length / v:
+                dist = v * tau
+                x = x0 + dist * np.cos(theta)
+                y = dist * np.sin(theta)
+                h = self._cfg.initial_heading + theta
             else:
-                x += s_l * np.cos(h)
-                y += s_l * np.sin(h)
-                h += np.sign(dtheta) * w * (dt - t_s)
+                dist = v * (tau - diag_length / v)
+                x = x0 + half_base + dist * np.cos(theta)
+                y = half_base * np.tan(theta) - dist * np.sin(theta)
+                h = self._cfg.initial_heading - theta
+            if self._cfg.initial_heading != 0.0:
+                c, s = np.cos(self._cfg.initial_heading), np.sin(self._cfg.initial_heading)
+                x_rot = c * x - s * y
+                y_rot = s * x + c * y
+                x, y = x_rot, y_rot
             return x, y, h
 
         poses = np.array([state_at(t) for t in times])
+        yaw = poses[:, 2]
         dt = self._dt
-        # Скорости посередине интервалов
-        t_mid = times[:-1] + dt / 2
-        in_straight = np.mod(t_mid, t_seg) < t_s
-        speed = np.where(in_straight, v, 0.0)
-        yaw_rate = np.where(in_straight, 0.0, np.sign(dtheta) * w)
+        speed = np.full(self._prediction_steps, v)
+        yaw_rate = np.diff(yaw) / dt
 
         u_ref = self._control_reference(speed, yaw_rate)
         return TrackingReference(x=poses, u=u_ref)
+
+@register_trajectory("straight_dyn")
+class StraightDynTrajectoryProvider(BaseTrajectoryProvider):
+    @dataclass(kw_only=True, slots=True)
+    class Config(ConstantSpeedConfig):
+        heading: float = 0.0
+
+    def reference_at(self, step: int) -> TrackingReference:
+        times = self._times(step)
+        v = self._cfg.speed
+        h = self._cfg.heading
+        
+        x = v * times * np.cos(h)
+        y = v * times * np.sin(h)
+        
+        states = np.zeros((self._prediction_steps + 1, 6))
+        states[:, 0] = x
+        states[:, 1] = y
+        states[:, 2] = h
+        states[:, 3] = v
+        
+        B = self._reference_model.track_width
+        r = self._reference_model.sprocket_radius
+        slip_l = self._reference_model.left_slip
+        slip_r = self._reference_model.right_slip
+        
+        omega = v / (r * (1 - slip_l))
+        u_ref = np.column_stack((np.full(self._prediction_steps, omega), np.full(self._prediction_steps, omega)))
+        
+        return TrackingReference(x=states, u=u_ref)
