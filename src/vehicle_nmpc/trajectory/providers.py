@@ -132,24 +132,25 @@ class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
         lap_time: float = 8.0
 
     def reference_at(self, step: int) -> TrackingReference:
+        """Return a full figure-eight tracking reference horizon."""
         times = self._times(step)
         a = self._cfg.scale
-        
+
         phase = 2 * np.pi * step * self._dt * self._cfg.speed / (4 * a)
         t = phase + times * self._cfg.speed / a
-        
+
         sin_t = np.sin(t)
         cos_t = np.cos(t)
         cos_2t = np.cos(2 * t)
-        
+
         x = a * sin_t
         y = a * sin_t * cos_t
         yaw = np.arctan2(cos_2t, cos_t)
-        
+
         speed = np.full(self._prediction_steps, self._cfg.speed)
-        yaw_rate = np.zeros(self._prediction_steps)  
-        u_ref = self._control_reference(speed, yaw_rate) 
-        
+        yaw_rate = np.zeros(self._prediction_steps)
+        u_ref = self._control_reference(speed, yaw_rate)
+
         return TrackingReference(x=np.column_stack((x, y, yaw)), u=u_ref)
 
 
@@ -210,32 +211,41 @@ class SawTrajectoryProvider(BaseTrajectoryProvider):
         u_ref = self._control_reference(speed, yaw_rate)
         return TrackingReference(x=poses, u=u_ref)
 
+
 @register_trajectory("straight_dyn")
 class StraightDynTrajectoryProvider(BaseTrajectoryProvider):
+    """Straight-line dynamic trajectory provider."""
+
     @dataclass(kw_only=True, slots=True)
     class Config(ConstantSpeedConfig):
+        """Straight dynamic trajectory configuration."""
+
         heading: float = 0.0
 
     def reference_at(self, step: int) -> TrackingReference:
+        """Return a straight-line dynamic tracking reference horizon."""
         times = self._times(step)
         v = self._cfg.speed
         h = self._cfg.heading
-        
+
         x = v * times * np.cos(h)
         y = v * times * np.sin(h)
-        
+
         states = np.zeros((self._prediction_steps + 1, 6))
         states[:, 0] = x
         states[:, 1] = y
         states[:, 2] = h
         states[:, 3] = v
-        
-        B = self._reference_model.track_width
+
         r = self._reference_model.sprocket_radius
         slip_l = self._reference_model.left_slip
-        slip_r = self._reference_model.right_slip
-        
+
         omega = v / (r * (1 - slip_l))
-        u_ref = np.column_stack((np.full(self._prediction_steps, omega), np.full(self._prediction_steps, omega)))
-        
+        u_ref = np.column_stack(
+            (
+                np.full(self._prediction_steps, omega),
+                np.full(self._prediction_steps, omega),
+            )
+        )
+
         return TrackingReference(x=states, u=u_ref)

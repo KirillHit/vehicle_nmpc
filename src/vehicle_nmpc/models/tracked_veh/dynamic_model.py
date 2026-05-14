@@ -164,15 +164,7 @@ class TrackedVehDynamicModel(BaseModel):
         speed = sqrt(vel_x * vel_x + vel_y * vel_y)
         a_c = speed * speed / (radius_prime + eps)
 
-        f_y = (
-            sign(yaw_rate)
-            * 2.0
-            * lateral_resistance
-            * mass
-            * gravity
-            * s0
-            / track_contact_length
-        )
+        f_y = sign(yaw_rate) * 2.0 * lateral_resistance * mass * gravity * s0 / track_contact_length
 
         f_l = drive_force_coefficient * left_track_speed
         f_r = drive_force_coefficient * right_track_speed
