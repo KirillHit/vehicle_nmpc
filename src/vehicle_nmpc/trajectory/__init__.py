@@ -4,9 +4,8 @@ from .base import BaseTrajectoryConfig, BaseTrajectoryProvider
 from .builder import build_trajectory, register_trajectory
 from .providers import (
     FigureEightTrajectoryProvider,
-    SawTrajectoryProvider,
     SCurveTrajectoryProvider,
-    StraightDynTrajectoryProvider,
+    SquareTrajectoryProvider,
     StraightTrajectoryProvider,
     TurnTrajectoryProvider,
 )
@@ -16,8 +15,7 @@ __all__ = [
     "BaseTrajectoryProvider",
     "FigureEightTrajectoryProvider",
     "SCurveTrajectoryProvider",
-    "SawTrajectoryProvider",
-    "StraightDynTrajectoryProvider",
+    "SquareTrajectoryProvider",
     "StraightTrajectoryProvider",
     "TurnTrajectoryProvider",
     "build_trajectory",

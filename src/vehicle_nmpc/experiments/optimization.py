@@ -87,13 +87,25 @@ def _objective(trial: optuna.Trial, cfg: BaseConfig) -> float:
         _set_config_value(trial_cfg, parameter.parameter, _suggest_value(trial, parameter))
 
     try:
-        _, metrics = run_configured_evaluation(trial_cfg)
+        results, metrics = run_configured_evaluation(trial_cfg)
     except Exception as exc:
         trial.set_user_attr("error", repr(exc))
         log.exception("Trial %d failed.", trial.number)
         return math.inf if trial_cfg.optuna.objective.direction == "minimize" else -math.inf
 
     value = _objective_value(metrics, trial_cfg.optuna.objective.components)
+    save_evaluation_artifacts(
+        results,
+        metrics,
+        trial_cfg.runner.output_dir,
+        extra_metrics={
+            "trial": {
+                "number": trial.number,
+                "value": value,
+                "params": trial.params,
+            },
+        },
+    )
     for item in metrics:
         log.info("Trial %d: %s", trial.number, item.print())
     log.info("Trial %d objective: %.6g", trial.number, value)

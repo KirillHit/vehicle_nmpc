@@ -1,6 +1,6 @@
 defaults:
   - base_config
-  - model: tracked_veh_dynamic
+  - model: tracked_veh_kinematic
   - problem: acados_ocp
   - sim: acados_sim
   - runner: base
