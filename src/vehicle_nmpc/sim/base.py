@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 from vehicle_nmpc.utils.factory import ConfiguredBase
 
 
-@dataclass(kw_only=True, slots=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class BaseSimulatorConfig:
     """Base configuration for simulator implementations."""
 

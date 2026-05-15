@@ -19,7 +19,7 @@ from vehicle_nmpc.utils.validation import as_vector
 class AcadosOcpProblem(BaseProblem):
     """Builds an Acados OCP from a model bundle."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(BaseProblemConfig):
         """Acados OCP problem configuration."""
 

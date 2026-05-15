@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 
-from vehicle_nmpc.controller import TrackingReference
 from vehicle_nmpc.trajectory.base import BaseTrajectoryConfig, BaseTrajectoryProvider
 from vehicle_nmpc.trajectory.builder import register_trajectory
+from vehicle_nmpc.utils.validation import require_positive
+
+if TYPE_CHECKING:
+    from vehicle_nmpc.controller import TrackingReference
 
 
-@dataclass(kw_only=True, slots=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class ConstantSpeedConfig(BaseTrajectoryConfig):
     """Base configuration for constant-speed geometric trajectories."""
 
@@ -24,7 +27,7 @@ class ConstantSpeedConfig(BaseTrajectoryConfig):
 class StraightTrajectoryProvider(BaseTrajectoryProvider):
     """Straight-line trajectory provider."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(ConstantSpeedConfig):
         """Straight-line trajectory configuration."""
 
@@ -35,16 +38,19 @@ class StraightTrajectoryProvider(BaseTrajectoryProvider):
         """Return a straight-line tracking reference horizon."""
         times = self._times(step)
         speed = np.full(self._prediction_steps + 1, self._cfg.speed)
+        yaw_rate = np.zeros(self._prediction_steps + 1)
         heading = np.full(self._prediction_steps + 1, self._cfg.heading)
         x_ref = np.column_stack(
             (
                 self._cfg.speed * times * np.cos(self._cfg.heading),
                 self._cfg.speed * times * np.sin(self._cfg.heading),
                 heading,
+                speed,
+                np.zeros(self._prediction_steps + 1),
+                yaw_rate,
             )
         )
-        u_ref = self._control_reference(speed[:-1], np.zeros(self._prediction_steps))
-        return TrackingReference(x=x_ref, u=u_ref)
+        return self._tracking_reference(x_ref)
 
 
 @register_trajectory("turn")
@@ -54,7 +60,7 @@ class TurnTrajectoryProvider(BaseTrajectoryProvider):
     _STRAIGHT_CURVATURE_TOL: ClassVar[float] = 1e-9
     """Curvature threshold below which the arc is treated as a straight line."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(ConstantSpeedConfig):
         """Constant-curvature turn trajectory configuration."""
 
@@ -64,11 +70,18 @@ class TurnTrajectoryProvider(BaseTrajectoryProvider):
     def reference_at(self, step: int) -> TrackingReference:
         """Return a constant-curvature tracking reference horizon."""
         times = self._times(step)
-        x_ref = self._integrate_curvature(times)
-        yaw_rate = np.full(self._prediction_steps, self._cfg.speed * self._cfg.curvature)
-        speed = np.full(self._prediction_steps, self._cfg.speed)
-        u_ref = self._control_reference(speed, yaw_rate)
-        return TrackingReference(x=x_ref, u=u_ref)
+        pose_ref = self._integrate_curvature(times)
+        speed = np.full(self._prediction_steps + 1, self._cfg.speed)
+        yaw_rate = np.full(self._prediction_steps + 1, self._cfg.speed * self._cfg.curvature)
+        x_ref = np.column_stack(
+            (
+                pose_ref,
+                speed,
+                np.zeros(self._prediction_steps + 1),
+                yaw_rate,
+            )
+        )
+        return self._tracking_reference(x_ref)
 
     def _integrate_curvature(self, times: np.ndarray) -> np.ndarray:
         """Return poses for the configured constant-curvature path."""
@@ -87,7 +100,7 @@ class TurnTrajectoryProvider(BaseTrajectoryProvider):
 class SCurveTrajectoryProvider(BaseTrajectoryProvider):
     """S-shaped sinusoidal path trajectory provider."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(ConstantSpeedConfig):
         """S-shaped trajectory configuration."""
 
@@ -107,9 +120,19 @@ class SCurveTrajectoryProvider(BaseTrajectoryProvider):
         yaw = np.arctan(dy_dx)
         curvature = self._path_curvature(x_axis[:-1])
         yaw_rate = self._cfg.speed * curvature
-        speed = np.full(self._prediction_steps, self._cfg.speed)
-        u_ref = self._control_reference(speed, yaw_rate)
-        return TrackingReference(x=np.column_stack((x_axis, y_axis, yaw)), u=u_ref)
+        speed = np.full(self._prediction_steps + 1, self._cfg.speed)
+        yaw_rate_nodes = np.concatenate((yaw_rate, yaw_rate[-1:]))
+        x_ref = np.column_stack(
+            (
+                x_axis,
+                y_axis,
+                yaw,
+                speed,
+                np.zeros(self._prediction_steps + 1),
+                yaw_rate_nodes,
+            )
+        )
+        return self._tracking_reference(x_ref)
 
     def _path_curvature(self, x_axis: np.ndarray) -> np.ndarray:
         """Return curvature for the configured sine path."""
@@ -124,7 +147,7 @@ class SCurveTrajectoryProvider(BaseTrajectoryProvider):
 class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
     """Lemniscate of Gerono: x = a·sin(t), y = a·sin(t)·cos(t)."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(BaseTrajectoryConfig):
         """Figure-eight trajectory configuration."""
 
@@ -153,16 +176,20 @@ class FigureEightTrajectoryProvider(BaseTrajectoryProvider):
         path_gain = a * np.hypot(cos_t[:-1], cos_2t[:-1])
         speed = path_gain * phase_rate
         yaw_rate = np.diff(yaw) / self._dt
-        u_ref = self._control_reference(speed, yaw_rate)
+        speed_nodes = np.concatenate((speed, speed[-1:]))
+        yaw_rate_nodes = np.concatenate((yaw_rate, yaw_rate[-1:]))
 
-        return TrackingReference(x=np.column_stack((x, y, yaw)), u=u_ref)
+        x_ref = np.column_stack(
+            (x, y, yaw, speed_nodes, np.zeros_like(speed_nodes), yaw_rate_nodes)
+        )
+        return self._tracking_reference(x_ref)
 
 
 @register_trajectory("square")
 class SquareTrajectoryProvider(BaseTrajectoryProvider):
     """Square trajectory with straight edges and spot turns."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(BaseTrajectoryConfig):
         """Square trajectory configuration."""
 
@@ -173,10 +200,10 @@ class SquareTrajectoryProvider(BaseTrajectoryProvider):
 
         def __post_init__(self) -> None:
             """Validate square trajectory parameters."""
-            values = [self.straight_speed, self.straight_length, self.turn_speed, self.deceleration]
-            if min(values) <= 0:
-                msg = "Square trajectory parameters must be positive."
-                raise ValueError(msg)
+            require_positive("straight_speed", self.straight_speed)
+            require_positive("straight_length", self.straight_length)
+            require_positive("turn_speed", self.turn_speed)
+            require_positive("deceleration", self.deceleration)
 
     def reference_at(self, step: int) -> TrackingReference:
         """Return a square stop-turn-go tracking reference horizon."""
@@ -221,5 +248,14 @@ class SquareTrajectoryProvider(BaseTrajectoryProvider):
             return (x_axis, y_axis, yaw), speed, yaw_rate
 
         poses, speed, yaw_rate = zip(*(sample(float(time)) for time in times), strict=True)
-        u_ref = self._control_reference(np.array(speed[:-1]), np.array(yaw_rate[:-1]))
-        return TrackingReference(x=np.array(poses), u=u_ref)
+        speed_array = np.array(speed)
+        yaw_rate_array = np.array(yaw_rate)
+        x_ref = np.column_stack(
+            (
+                np.array(poses),
+                speed_array,
+                np.zeros(self._prediction_steps + 1),
+                yaw_rate_array,
+            )
+        )
+        return self._tracking_reference(x_ref)

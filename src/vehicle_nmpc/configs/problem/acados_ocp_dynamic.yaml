@@ -3,10 +3,10 @@ params:
   prediction_steps: 40
   prediction_horizon_time: 0.8
   artifacts_dir: ${runner.output_dir}/acados
-  state_weights: [20.0, 20.0, 2.0]
+  state_weights: [20.0, 20.0, 5.0, 0.2, 0.2, 2.0]
   control_weights: [0.0, 0.0]
-  control_lower_bounds: [-20.0, -20.0]
-  control_upper_bounds: [20.0, 20.0]
+  control_lower_bounds: [-15.0, -15.0]
+  control_upper_bounds: [15.0, 15.0]
   bounded_control_indices: [0, 1]
   qp_solver: PARTIAL_CONDENSING_HPIPM
   hessian_approx: GAUSS_NEWTON

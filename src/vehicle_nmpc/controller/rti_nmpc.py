@@ -23,7 +23,7 @@ class RtiNmpcController(BaseController):
     _ALLOWED_STATUSES: ClassVar[set[int]] = {0, 2, 5}
     """Acados statuses accepted as non-fatal during RTI phases."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(BaseControllerConfig):
         """RTI NMPC controller configuration."""
 
@@ -86,14 +86,9 @@ class RtiNmpcController(BaseController):
             reference.x,
             (self._prediction_steps + 1, self._model.nx),
         )
-        u_ref = as_matrix(
-            "reference.u",
-            [] if reference.u is None else reference.u,
-            (self._prediction_steps, self._model.nu),
-            default=0.0,
-        )
 
-        stage_references = np.hstack((x_ref[:-1], u_ref))
+        control_target = np.zeros((self._prediction_steps, self._model.nu), dtype=float)
+        stage_references = np.hstack((x_ref[:-1], control_target))
         terminal_reference = x_ref[-1]
 
         for stage, stage_reference in enumerate(stage_references):

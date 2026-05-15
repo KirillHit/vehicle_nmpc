@@ -6,7 +6,7 @@ params:
   left_slip: 0.05
   right_slip: 0.05
   longitudinal_resistance: 0.08
-  lateral_resistance: 0.8
+  lateral_resistance: 0.2
   gravity: 9.81
   mass: 350.0
   inertia: 79.2

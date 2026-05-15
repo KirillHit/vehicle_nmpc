@@ -8,7 +8,7 @@ from casadi import SX, cos, sin, sqrt, tanh, vertcat
 from omegaconf import MISSING
 
 from vehicle_nmpc.models import BaseModel, BaseModelConfig, ModelBundle, register_model
-from vehicle_nmpc.utils.validation import as_vector
+from vehicle_nmpc.utils.validation import as_vector, require_positive, require_slip
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -198,36 +198,11 @@ class TrackForces:
     """Longitudinal offset of the instantaneous rotation center."""
 
 
-@dataclass(frozen=True, kw_only=True, slots=True)
-class TrackedVehicleReferenceModel:
-    """Model-specific data needed to generate tracked vehicle references."""
-
-    sprocket_radius: float
-    """Drive sprocket radius."""
-
-    track_width: float
-    """Distance between left and right track center lines."""
-
-    left_slip: float
-    """Left track slip coefficient."""
-
-    right_slip: float
-    """Right track slip coefficient."""
-
-    def control_reference(self, speed: np.ndarray, yaw_rate: np.ndarray) -> np.ndarray:
-        """Convert body speed and yaw rate references to track angular speeds."""
-        left_speed = speed - 0.5 * self.track_width * yaw_rate
-        right_speed = speed + 0.5 * self.track_width * yaw_rate
-        omega_l = left_speed / (self.sprocket_radius * (1.0 - self.left_slip))
-        omega_r = right_speed / (self.sprocket_radius * (1.0 - self.right_slip))
-        return np.column_stack((omega_l, omega_r))
-
-
 @register_model("tracked_veh_dynamic")
 class TrackedVehDynamicModel(BaseModel):
     """Dynamic skid-steering tracked vehicle model."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(BaseModelConfig):
         """Tracked vehicle dynamic model configuration."""
 
@@ -273,6 +248,22 @@ class TrackedVehDynamicModel(BaseModel):
         x0: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         """Default initial state [X, Y, theta, Vx, Vy, omega]."""
 
+        def __post_init__(self) -> None:
+            """Validate physical model parameters."""
+            require_positive("sprocket_radius", self.sprocket_radius)
+            require_positive("track_width", self.track_width)
+            require_positive("track_contact_length", self.track_contact_length)
+            require_positive("longitudinal_resistance", self.longitudinal_resistance)
+            require_positive("lateral_resistance", self.lateral_resistance)
+            require_positive("gravity", self.gravity)
+            require_positive("mass", self.mass)
+            require_positive("inertia", self.inertia)
+            require_positive("drive_force_gain", self.drive_force_gain)
+            require_positive("max_drive_force", self.max_drive_force)
+            require_positive("regularization_epsilon", self.regularization_epsilon)
+            require_slip("left_slip", self.left_slip)
+            require_slip("right_slip", self.right_slip)
+
     def __init__(self, cfg: Config) -> None:
         """Initialize the model with the provided configuration."""
         super().__init__(cfg)
@@ -303,12 +294,6 @@ class TrackedVehDynamicModel(BaseModel):
             np=13,
             p0=self._parameter_values(),
             x0=as_vector("x0", self._cfg.x0, 6),
-            trajectory_reference_model=TrackedVehicleReferenceModel(
-                sprocket_radius=self._cfg.sprocket_radius,
-                track_width=self._cfg.track_width,
-                left_slip=self._cfg.left_slip,
-                right_slip=self._cfg.right_slip,
-            ),
         )
 
     def _track_kinematics(
@@ -349,14 +334,18 @@ class TrackedVehDynamicModel(BaseModel):
         tan_beta /= lateral_denom
         cos_beta = 1.0 / sqrt(1.0 + tan_beta * tan_beta)
         sin_beta = tan_beta * cos_beta
-        rotation_center_offset = (
+        raw_rotation_center_offset = (
             parameters.track_contact_length
             * kinematics.longitudinal_track_speed
             * symbols.yaw_rate
             / lateral_denom
         )
+        max_rotation_center_offset = 0.5 * parameters.track_contact_length
+        rotation_center_offset = max_rotation_center_offset * tanh(
+            raw_rotation_center_offset / (max_rotation_center_offset + eps)
+        )
 
-        speed = sqrt(symbols.vel_x * symbols.vel_x + symbols.vel_y * symbols.vel_y)
+        speed = sqrt(symbols.vel_x * symbols.vel_x + symbols.vel_y * symbols.vel_y + eps * eps)
         centrifugal_acceleration = speed * symbols.yaw_rate
         yaw_direction = self._smooth_sign(symbols.yaw_rate, eps)
         velocity_direction = self._smooth_sign(symbols.vel_x, eps)

@@ -52,3 +52,17 @@ def as_matrix(
 ) -> np.ndarray:
     """Convert a configured matrix to a validated numpy array."""
     return as_array(name, values, expected_shape, default=default, dtype=dtype)
+
+
+def require_positive(name: str, value: float) -> None:
+    """Raise if a physical parameter is not strictly positive."""
+    if value <= 0.0:
+        msg = f"{name} must be positive, got {value}."
+        raise ValueError(msg)
+
+
+def require_slip(name: str, value: float) -> None:
+    """Raise if a slip coefficient would make track speed conversion singular."""
+    if not 0.0 <= value < 1.0:
+        msg = f"{name} must be in [0.0, 1.0), got {value}."
+        raise ValueError(msg)

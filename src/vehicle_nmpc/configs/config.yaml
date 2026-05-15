@@ -1,7 +1,7 @@
 defaults:
   - base_config
   - model: tracked_veh_dynamic
-  - problem: acados_ocp
+  - problem: acados_ocp_dynamic
   - sim: acados_sim
   - runner: base
   - controller: rti_nmpc
