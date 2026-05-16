@@ -1,4 +1,4 @@
-n_trials: 12
+n_trials: 20
 parameters:
   - parameter: problem.params.prediction_horizon_time
     type: float

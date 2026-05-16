@@ -53,9 +53,6 @@ class ClosedLoopResult:
     reference_states: np.ndarray
     """Reference state trajectory with shape (n_steps + 1, nx)."""
 
-    reference_controls: np.ndarray
-    """Reference control trajectory with shape (n_steps, nu)."""
-
     stats: list[dict]
     """Per-step controller statistics."""
 
@@ -191,10 +188,9 @@ def _run_trajectory(
     states = np.zeros((n_steps + 1, model.nx), dtype=float)
     controls = np.zeros((n_steps, model.nu), dtype=float)
     reference_states = np.zeros((n_steps + 1, model.nx), dtype=float)
-    reference_controls = np.zeros((n_steps, model.nu), dtype=float)
     stats: list[dict] = []
 
-    states[0] = np.asarray(model.x0, dtype=float)
+    states[0] = trajectory.initial_state()
     controller.reset(states[0])
     simulator.reset(states[0])
 
@@ -203,7 +199,6 @@ def _run_trajectory(
         reference_states[step] = reference.x[0]
         if step == n_steps - 1:
             reference_states[step + 1] = reference.x[1]
-        reference_controls[step] = np.zeros(model.nu) if reference.u is None else reference.u[0]
         controls[step] = controller.solve(states[step], reference=reference)
         stats.append(controller.get_stats())
         states[step + 1] = simulator.step(states[step], controls[step])
@@ -213,6 +208,5 @@ def _run_trajectory(
         states=states,
         controls=controls,
         reference_states=reference_states,
-        reference_controls=reference_controls,
         stats=stats,
     )

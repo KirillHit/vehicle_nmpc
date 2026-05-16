@@ -6,7 +6,7 @@ import copy
 import logging
 import math
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import fields, is_dataclass
+from dataclasses import fields, is_dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -84,16 +84,32 @@ def _objective(trial: optuna.Trial, cfg: BaseConfig) -> float:
         Path(cfg.runner.output_dir) / "trials" / f"trial_{trial.number:04d}",
     )
     for parameter in trial_cfg.optuna.parameters:
-        _set_config_value(trial_cfg, parameter.parameter, _suggest_value(trial, parameter))
+        trial_cfg = _set_config_value(
+            trial_cfg,
+            parameter.parameter,
+            _suggest_value(trial, parameter),
+        )
 
     try:
-        _, metrics = run_configured_evaluation(trial_cfg)
+        results, metrics = run_configured_evaluation(trial_cfg)
     except Exception as exc:
         trial.set_user_attr("error", repr(exc))
         log.exception("Trial %d failed.", trial.number)
         return math.inf if trial_cfg.optuna.objective.direction == "minimize" else -math.inf
 
     value = _objective_value(metrics, trial_cfg.optuna.objective.components)
+    save_evaluation_artifacts(
+        results,
+        metrics,
+        trial_cfg.runner.output_dir,
+        extra_metrics={
+            "trial": {
+                "number": trial.number,
+                "value": value,
+                "params": trial.params,
+            },
+        },
+    )
     for item in metrics:
         log.info("Trial %d: %s", trial.number, item.print())
     log.info("Trial %d objective: %.6g", trial.number, value)
@@ -135,11 +151,11 @@ def _configured_copy(
 ) -> BaseConfig:
     """Return a config copy with optimized params and run output directories applied."""
     result = copy.deepcopy(cfg)
-    result.runner.output_dir = str(output_dir)
+    result = replace(result, runner=replace(result.runner, output_dir=str(output_dir)))
     if "artifacts_dir" in result.problem.params:
         result.problem.params["artifacts_dir"] = str(output_dir / "acados")
     for parameter, value in params.items():
-        _set_config_value(result, parameter, value)
+        result = _set_config_value(result, parameter, value)
     return result
 
 
@@ -174,43 +190,37 @@ def _suggest_value(trial: optuna.Trial, parameter: OptunaParameter) -> object:
             raise ValueError(msg)
 
 
-def _set_config_value(cfg: BaseConfig, parameter: str, value: object) -> None:
-    """Set a nested config value by dotted path."""
+def _set_config_value(cfg: BaseConfig, parameter: str, value: object) -> BaseConfig:
+    """Return a config copy with one nested value changed by dotted path."""
     path = parameter.split(".")
     if not path:
         msg = "Optuna parameter path cannot be empty."
         raise ValueError(msg)
-
-    target: object = cfg
-    for item in path[:-1]:
-        target = _get_child(target, item, parameter)
-    _set_child(target, path[-1], value, parameter)
+    return _replace_child(cfg, path, value, parameter)
 
 
-def _get_child(target: object, key: str, parameter: str) -> object:
-    """Read one nested config item."""
+def _replace_child(target: object, path: list[str], value: object, parameter: str) -> object:
+    """Return target with the nested child at path replaced."""
+    key = path[0]
     if isinstance(target, dict):
-        return target[key]
+        updated = dict(target)
+        updated[key] = (
+            _replace_child(updated[key], path[1:], value, parameter) if len(path) > 1 else value
+        )
+        return updated
     if isinstance(target, list):
-        return target[int(key)]
+        index = int(key)
+        updated = list(target)
+        updated[index] = (
+            _replace_child(updated[index], path[1:], value, parameter) if len(path) > 1 else value
+        )
+        return updated
     if is_dataclass(target):
-        return getattr(target, key)
-
-    msg = f"Cannot navigate through '{key}' in optuna parameter '{parameter}'."
-    raise TypeError(msg)
-
-
-def _set_child(target: object, key: str, value: object, parameter: str) -> None:
-    """Set one nested config item."""
-    if isinstance(target, dict):
-        target[key] = value
-        return
-    if isinstance(target, list):
-        target[int(key)] = value
-        return
-    if is_dataclass(target):
-        setattr(target, key, value)
-        return
+        current = getattr(target, key)
+        replacement = (
+            _replace_child(current, path[1:], value, parameter) if len(path) > 1 else value
+        )
+        return replace(target, **{key: replacement})
 
     msg = f"Cannot set '{key}' in optuna parameter '{parameter}'."
     raise TypeError(msg)

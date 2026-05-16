@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 from vehicle_nmpc.utils.factory import ConfiguredBase
 
 
-@dataclass(kw_only=True, slots=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class BaseControllerConfig:
     """Base configuration for controller implementations."""
 
@@ -26,9 +26,6 @@ class TrackingReference:
 
     x: np.ndarray
     """State references with shape (N + 1, nx)."""
-
-    u: np.ndarray | None = None
-    """Control references with shape (N, nu). Defaults to zeros."""
 
 
 class BaseController(ConfiguredBase, ABC):

@@ -1,0 +1,486 @@
+"""Tracked vehicle dynamic model implementation."""
+
+from dataclasses import dataclass, field
+
+import numpy as np
+from acados_template import AcadosModel
+from casadi import SX, cos, sin, sqrt, tanh, vertcat
+from omegaconf import MISSING
+
+from vehicle_nmpc.models import BaseModel, BaseModelConfig, ModelBundle, register_model
+from vehicle_nmpc.utils.validation import as_vector, require_positive, require_slip
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class DynamicModelSymbols:
+    """Symbolic variables used by the tracked vehicle dynamic model."""
+
+    x: SX
+    xdot: SX
+    u: SX
+    pos_x: SX
+    pos_y: SX
+    yaw: SX
+    vel_x: SX
+    vel_y: SX
+    yaw_rate: SX
+    omega_l: SX
+    omega_r: SX
+
+    @classmethod
+    def create(cls) -> "DynamicModelSymbols":
+        """Create state, derivative, and control symbols."""
+        pos_x = SX.sym("X")
+        pos_y = SX.sym("Y")
+        yaw = SX.sym("theta")
+        vel_x = SX.sym("Vx")
+        vel_y = SX.sym("Vy")
+        yaw_rate = SX.sym("omega")
+
+        x = vertcat(pos_x, pos_y, yaw, vel_x, vel_y, yaw_rate)
+
+        omega_l = SX.sym("omega_l")
+        omega_r = SX.sym("omega_r")
+        u = vertcat(omega_l, omega_r)
+
+        pos_x_dot = SX.sym("X_dot")
+        pos_y_dot = SX.sym("Y_dot")
+        yaw_dot = SX.sym("theta_dot")
+        vel_x_dot = SX.sym("Vx_dot")
+        vel_y_dot = SX.sym("Vy_dot")
+        yaw_rate_dot = SX.sym("omega_dot")
+
+        xdot = vertcat(pos_x_dot, pos_y_dot, yaw_dot, vel_x_dot, vel_y_dot, yaw_rate_dot)
+
+        return cls(
+            x=x,
+            xdot=xdot,
+            u=u,
+            pos_x=pos_x,
+            pos_y=pos_y,
+            yaw=yaw,
+            vel_x=vel_x,
+            vel_y=vel_y,
+            yaw_rate=yaw_rate,
+            omega_l=omega_l,
+            omega_r=omega_r,
+        )
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class DynamicModelParameters:
+    """Symbolic parameters used by the tracked vehicle dynamic model."""
+
+    p: SX
+    sprocket_radius: SX
+    track_width: SX
+    left_slip: SX
+    right_slip: SX
+    longitudinal_resistance: SX
+    lateral_resistance: SX
+    track_contact_length: SX
+    gravity: SX
+    mass: SX
+    inertia: SX
+
+    drive_force_gain: SX
+    """Linear gain from slip speed to drive force."""
+
+    max_drive_force: SX
+    """Smooth saturation limit for each track drive force."""
+
+    regularization_epsilon: SX
+    """Small value used to smooth signs and divisions."""
+
+    @classmethod
+    def create(cls) -> "DynamicModelParameters":
+        """Create symbolic model parameters."""
+        sprocket_radius = SX.sym("r")
+        track_width = SX.sym("B")
+        left_slip = SX.sym("i_l")
+        right_slip = SX.sym("i_r")
+        longitudinal_resistance = SX.sym("mu_l")
+        lateral_resistance = SX.sym("mu_t")
+        track_contact_length = SX.sym("l")
+        gravity = SX.sym("g")
+        mass = SX.sym("m")
+        inertia = SX.sym("I")
+        drive_force_gain = SX.sym("k_drive")
+        max_drive_force = SX.sym("F_drive_max")
+        regularization_epsilon = SX.sym("eps")
+
+        p = vertcat(
+            sprocket_radius,
+            track_width,
+            left_slip,
+            right_slip,
+            longitudinal_resistance,
+            lateral_resistance,
+            track_contact_length,
+            gravity,
+            mass,
+            inertia,
+            drive_force_gain,
+            max_drive_force,
+            regularization_epsilon,
+        )
+
+        return cls(
+            p=p,
+            sprocket_radius=sprocket_radius,
+            track_width=track_width,
+            left_slip=left_slip,
+            right_slip=right_slip,
+            longitudinal_resistance=longitudinal_resistance,
+            lateral_resistance=lateral_resistance,
+            track_contact_length=track_contact_length,
+            gravity=gravity,
+            mass=mass,
+            inertia=inertia,
+            drive_force_gain=drive_force_gain,
+            max_drive_force=max_drive_force,
+            regularization_epsilon=regularization_epsilon,
+        )
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class TrackKinematics:
+    """Track and body velocities used to compute drive forces."""
+
+    left_track_speed: SX
+    """Commanded left track ground speed after slip correction."""
+
+    right_track_speed: SX
+    """Commanded right track ground speed after slip correction."""
+
+    left_body_speed: SX
+    """Body longitudinal speed at the left track center line."""
+
+    right_body_speed: SX
+    """Body longitudinal speed at the right track center line."""
+
+    longitudinal_track_speed: SX
+    """Average commanded ground speed of both tracks."""
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class TrackForces:
+    """Forces and moments acting on the tracked vehicle."""
+
+    left_drive_force: SX
+    """Longitudinal drive force generated by the left track."""
+
+    right_drive_force: SX
+    """Longitudinal drive force generated by the right track."""
+
+    longitudinal_resistance_force: SX
+    """Rolling resistance force opposing longitudinal motion."""
+
+    lateral_force: SX
+    """Transverse resistance force opposing lateral slip."""
+
+    drive_moment: SX
+    """Yaw moment generated by the difference in track drive forces."""
+
+    resistance_moment: SX
+    """Yaw resistance moment from lateral track-ground interaction."""
+
+    centrifugal_acceleration: SX
+    """Centrifugal acceleration term used in lateral force calculations."""
+
+    sin_beta: SX
+    """Sine of the side-slip angle approximation."""
+
+    cos_beta: SX
+    """Cosine of the side-slip angle approximation."""
+
+    rotation_center_offset: SX
+    """Longitudinal offset of the instantaneous rotation center."""
+
+
+@register_model("tracked_veh_dynamic")
+class TrackedVehDynamicModel(BaseModel):
+    """Dynamic skid-steering tracked vehicle model."""
+
+    @dataclass(frozen=True, kw_only=True, slots=True)
+    class Config(BaseModelConfig):
+        """Tracked vehicle dynamic model configuration."""
+
+        sprocket_radius: float = MISSING
+        """Drive sprocket radius."""
+
+        track_width: float = MISSING
+        """Distance between left and right track center lines."""
+
+        track_contact_length: float = MISSING
+        """Length of the track contact patch."""
+
+        left_slip: float = 0.0
+        """Left track slip coefficient."""
+
+        right_slip: float = 0.0
+        """Right track slip coefficient."""
+
+        longitudinal_resistance: float = MISSING
+        """Coefficient of longitudinal resistance μ_l."""
+
+        lateral_resistance: float = MISSING
+        """Coefficient of transverse resistance μ_t."""
+
+        gravity: float = 9.81
+        """Acceleration due to gravity."""
+
+        mass: float = MISSING
+        """Vehicle mass m."""
+
+        inertia: float = MISSING
+        """Moment of inertia I_z."""
+
+        drive_force_gain: float = 1.0
+        """Linear drive gain from track/body slip speed to drive force."""
+
+        max_drive_force: float = MISSING
+        """Smooth saturation limit for each track drive force."""
+
+        regularization_epsilon: float = 1e-6
+        """Small positive value used to smooth signs and divisions."""
+
+        x0: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        """Default initial state [X, Y, theta, Vx, Vy, omega]."""
+
+        def __post_init__(self) -> None:
+            """Validate physical model parameters."""
+            require_positive("sprocket_radius", self.sprocket_radius)
+            require_positive("track_width", self.track_width)
+            require_positive("track_contact_length", self.track_contact_length)
+            require_positive("longitudinal_resistance", self.longitudinal_resistance)
+            require_positive("lateral_resistance", self.lateral_resistance)
+            require_positive("gravity", self.gravity)
+            require_positive("mass", self.mass)
+            require_positive("inertia", self.inertia)
+            require_positive("drive_force_gain", self.drive_force_gain)
+            require_positive("max_drive_force", self.max_drive_force)
+            require_positive("regularization_epsilon", self.regularization_epsilon)
+            require_slip("left_slip", self.left_slip)
+            require_slip("right_slip", self.right_slip)
+
+    def __init__(self, cfg: Config) -> None:
+        """Initialize the model with the provided configuration."""
+        super().__init__(cfg)
+
+    def build(self) -> ModelBundle:
+        """Build and return the Acados model bundle."""
+        symbols = DynamicModelSymbols.create()
+        parameters = DynamicModelParameters.create()
+        kinematics = self._track_kinematics(symbols, parameters)
+        forces = self._track_forces(symbols, parameters, kinematics)
+        f_expl = self._explicit_dynamics(symbols, parameters, forces)
+        f_impl = symbols.xdot - f_expl
+
+        model = AcadosModel()
+        model.f_impl_expr = f_impl
+        model.f_expl_expr = f_expl
+        model.x = symbols.x
+        model.xdot = symbols.xdot
+        model.u = symbols.u
+        model.p = parameters.p
+        model.name = "tracked_veh_dynamic"
+        self._set_labels(model)
+
+        return ModelBundle(
+            model=model,
+            nx=6,
+            nu=2,
+            np=13,
+            p0=self._parameter_values(),
+            x0=as_vector("x0", self._cfg.x0, 6),
+        )
+
+    def _track_kinematics(
+        self,
+        symbols: DynamicModelSymbols,
+        parameters: DynamicModelParameters,
+    ) -> TrackKinematics:
+        """Compute track command speeds and local body speeds."""
+        left_track_speed = (
+            parameters.sprocket_radius * symbols.omega_l * (1.0 - parameters.left_slip)
+        )
+        right_track_speed = (
+            parameters.sprocket_radius * symbols.omega_r * (1.0 - parameters.right_slip)
+        )
+        left_body_speed = symbols.vel_x - 0.5 * parameters.track_width * symbols.yaw_rate
+        right_body_speed = symbols.vel_x + 0.5 * parameters.track_width * symbols.yaw_rate
+        # Nominal forward speed commanded by both tracks, not the current body Vx state.
+        longitudinal_track_speed = 0.5 * (left_track_speed + right_track_speed)
+
+        return TrackKinematics(
+            left_track_speed=left_track_speed,
+            right_track_speed=right_track_speed,
+            left_body_speed=left_body_speed,
+            right_body_speed=right_body_speed,
+            longitudinal_track_speed=longitudinal_track_speed,
+        )
+
+    def _track_forces(
+        self,
+        symbols: DynamicModelSymbols,
+        parameters: DynamicModelParameters,
+        kinematics: TrackKinematics,
+    ) -> TrackForces:
+        """Compute smooth drive, resistance, lateral, and yaw moments."""
+        eps = parameters.regularization_epsilon
+        lateral_denom = 2.0 * parameters.lateral_resistance * parameters.gravity + eps
+        tan_beta = parameters.track_contact_length * symbols.yaw_rate * symbols.yaw_rate
+        tan_beta /= lateral_denom
+        cos_beta = 1.0 / sqrt(1.0 + tan_beta * tan_beta)
+        sin_beta = tan_beta * cos_beta
+        raw_rotation_center_offset = (
+            parameters.track_contact_length
+            * kinematics.longitudinal_track_speed
+            * symbols.yaw_rate
+            / lateral_denom
+        )
+        max_rotation_center_offset = 0.5 * parameters.track_contact_length
+        rotation_center_offset = max_rotation_center_offset * tanh(
+            raw_rotation_center_offset / (max_rotation_center_offset + eps)
+        )
+
+        speed = sqrt(symbols.vel_x * symbols.vel_x + symbols.vel_y * symbols.vel_y + eps * eps)
+        centrifugal_acceleration = speed * symbols.yaw_rate
+        yaw_direction = self._smooth_sign(symbols.yaw_rate, eps)
+        velocity_direction = self._smooth_sign(symbols.vel_x, eps)
+
+        raw_left_drive_force = parameters.drive_force_gain * (
+            kinematics.left_track_speed - kinematics.left_body_speed
+        )
+        raw_right_drive_force = parameters.drive_force_gain * (
+            kinematics.right_track_speed - kinematics.right_body_speed
+        )
+        left_drive_force = self._smooth_saturate(
+            raw_left_drive_force,
+            parameters.max_drive_force,
+            eps,
+        )
+        right_drive_force = self._smooth_saturate(
+            raw_right_drive_force,
+            parameters.max_drive_force,
+            eps,
+        )
+
+        longitudinal_resistance_force = (
+            parameters.longitudinal_resistance
+            * parameters.mass
+            * parameters.gravity
+            * velocity_direction
+        )
+        lateral_force = (
+            yaw_direction
+            * 2.0
+            * parameters.lateral_resistance
+            * parameters.mass
+            * parameters.gravity
+            * rotation_center_offset
+            / (parameters.track_contact_length + eps)
+        )
+        drive_moment = (right_drive_force - left_drive_force) * parameters.track_width / 2.0
+        resistance_moment = (
+            yaw_direction
+            * parameters.lateral_resistance
+            * parameters.mass
+            * parameters.gravity
+            / (parameters.track_contact_length + eps)
+            * (
+                (parameters.track_contact_length * parameters.track_contact_length) / 4.0
+                - rotation_center_offset * rotation_center_offset
+            )
+        )
+
+        return TrackForces(
+            left_drive_force=left_drive_force,
+            right_drive_force=right_drive_force,
+            longitudinal_resistance_force=longitudinal_resistance_force,
+            lateral_force=lateral_force,
+            drive_moment=drive_moment,
+            resistance_moment=resistance_moment,
+            centrifugal_acceleration=centrifugal_acceleration,
+            sin_beta=sin_beta,
+            cos_beta=cos_beta,
+            rotation_center_offset=rotation_center_offset,
+        )
+
+    def _explicit_dynamics(
+        self,
+        symbols: DynamicModelSymbols,
+        parameters: DynamicModelParameters,
+        forces: TrackForces,
+    ) -> SX:
+        """Build the explicit state derivative expression."""
+        return vertcat(
+            cos(symbols.yaw) * symbols.vel_x - sin(symbols.yaw) * symbols.vel_y,
+            sin(symbols.yaw) * symbols.vel_x + cos(symbols.yaw) * symbols.vel_y,
+            symbols.yaw_rate,
+            (
+                forces.left_drive_force
+                + forces.right_drive_force
+                - parameters.mass * forces.centrifugal_acceleration * forces.sin_beta
+                - forces.longitudinal_resistance_force
+            )
+            / parameters.mass,
+            (
+                forces.lateral_force
+                - parameters.mass * forces.centrifugal_acceleration * forces.cos_beta
+            )
+            / parameters.mass,
+            (
+                forces.drive_moment
+                - forces.resistance_moment
+                + parameters.mass
+                * forces.centrifugal_acceleration
+                * forces.rotation_center_offset
+                * forces.cos_beta
+            )
+            / parameters.inertia,
+        )
+
+    def _set_labels(self, model: AcadosModel) -> None:
+        """Set plotting labels on the Acados model."""
+        model.x_labels = [
+            "$X$ [m]",
+            "$Y$ [m]",
+            r"$\theta$ [rad]",
+            "$V_x$ [m/s]",
+            "$V_y$ [m/s]",
+            r"$\omega$ [rad/s]",
+        ]
+        model.u_labels = [r"$\omega_l$ [rad/s]", r"$\omega_r$ [rad/s]"]
+        model.t_label = "$t$ [s]"
+
+    def _parameter_values(self) -> np.ndarray:
+        """Return default numeric values for the symbolic parameter vector."""
+        return as_vector(
+            "p0",
+            [
+                self._cfg.sprocket_radius,
+                self._cfg.track_width,
+                self._cfg.left_slip,
+                self._cfg.right_slip,
+                self._cfg.longitudinal_resistance,
+                self._cfg.lateral_resistance,
+                self._cfg.track_contact_length,
+                self._cfg.gravity,
+                self._cfg.mass,
+                self._cfg.inertia,
+                self._cfg.drive_force_gain,
+                self._cfg.max_drive_force,
+                self._cfg.regularization_epsilon,
+            ],
+            13,
+        )
+
+    def _smooth_sign(self, value: SX, eps: SX) -> SX:
+        """Return a differentiable sign approximation."""
+        return value / sqrt(value * value + eps * eps)
+
+    def _smooth_saturate(self, value: SX, limit: SX, eps: SX) -> SX:
+        """Limit a force smoothly while avoiding division by zero."""
+        return limit * tanh(value / (limit + eps))

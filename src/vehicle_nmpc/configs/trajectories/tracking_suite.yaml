@@ -1,13 +1,10 @@
-- name: straight
+- name: figure_eight
   params:
-    speed: 0.5
-    heading: 0.0
-- name: turn
+    scale: 8.0
+    average_speed: 1.0
+- name: square
   params:
-    speed: 0.45
-    curvature: 0.35
-- name: s_curve
-  params:
-    speed: 0.5
-    amplitude: 0.8
-    wavelength: 8.0
+    straight_speed: 1.0
+    straight_length: 4.0
+    turn_speed: 0.8
+    deceleration: 0.4

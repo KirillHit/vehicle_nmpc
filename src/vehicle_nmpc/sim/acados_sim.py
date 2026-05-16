@@ -24,7 +24,7 @@ class AcadosSimulator(BaseSimulator):
     _SUCCESS_STATUS: ClassVar[int] = 0
     """Acados simulator status code for a successful integration step."""
 
-    @dataclass(kw_only=True, slots=True)
+    @dataclass(frozen=True, kw_only=True, slots=True)
     class Config(BaseSimulatorConfig):
         """Acados simulator configuration."""
 
