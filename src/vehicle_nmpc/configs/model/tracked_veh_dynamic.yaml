@@ -1,16 +1,12 @@
 name: tracked_veh_dynamic
 params:
-  sprocket_radius: 0.12
-  track_width: 0.77
-  track_contact_length: 1.05
-  left_slip: 0.05
-  right_slip: 0.05
-  longitudinal_resistance: 0.08
-  lateral_resistance: 0.2
+  sprocket_radius: 0.3
+  track_width: 0.86
+  track_contact_length: 1.2
+  longitudinal_resistance: 0.04
+  lateral_resistance: 0.8
   gravity: 9.81
   mass: 350.0
-  inertia: 79.2
-  drive_force_gain: 800.0
-  max_drive_force: 1500.0
-  regularization_epsilon: 1e-6
-  x0: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  inertia: 100.0
+  velocity_sign_epsilon: 0.1
+  yaw_rate_sign_epsilon: 0.1

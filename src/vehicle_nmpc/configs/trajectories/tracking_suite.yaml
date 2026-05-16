@@ -8,3 +8,6 @@
     straight_length: 4.0
     turn_speed: 0.8
     deceleration: 0.4
+- name: turn
+  params:
+    curvature: 3.0
