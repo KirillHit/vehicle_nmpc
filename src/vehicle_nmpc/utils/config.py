@@ -28,8 +28,8 @@ class RunnerConfig:
     seed: int = 42
     experiment_name: str = MISSING
     mode: RunnerMode = MISSING
-    n_sim: int = 100
-    """Number of closed-loop simulation steps."""
+    simulation_time: float = 10.0
+    """Closed-loop simulation duration in seconds."""
 
     output_dir: str = MISSING
     """Directory where run artifacts are written."""

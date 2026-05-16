@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -25,6 +26,7 @@ from vehicle_nmpc.models import build_model
 from vehicle_nmpc.problem import build_problem
 from vehicle_nmpc.sim import build_simulator
 from vehicle_nmpc.trajectory import build_trajectory
+from vehicle_nmpc.utils.validation import require_positive
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -86,13 +88,8 @@ def run_configured_evaluation(
         msg = "Closed-loop evaluation requires at least one configured trajectory."
         raise ValueError(msg)
 
-    results = run_evaluation(
-        controller,
-        simulator,
-        model,
-        trajectories,
-        n_steps=cfg.runner.n_sim,
-    )
+    n_steps = _simulation_steps(cfg.runner.simulation_time, dt=problem.dt)
+    results = run_evaluation(controller, simulator, model, trajectories, n_steps=n_steps)
     return results, evaluate_results(results, dt=problem.dt), problem.dt
 
 
@@ -176,6 +173,13 @@ def evaluate_result(result: ClosedLoopResult, *, dt: float) -> EvaluationMetrics
 def evaluate_results(results: list[ClosedLoopResult], *, dt: float) -> list[EvaluationMetrics]:
     """Evaluate all metrics for a list of closed-loop rollouts."""
     return [evaluate_result(result, dt=dt) for result in results]
+
+
+def _simulation_steps(simulation_time: float, *, dt: float) -> int:
+    """Return the rollout step count required to cover simulation_time seconds."""
+    require_positive("simulation_time", simulation_time)
+    require_positive("dt", dt)
+    return math.ceil(simulation_time / dt)
 
 
 def _safe_artifact_name(name: str) -> str:

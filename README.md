@@ -35,7 +35,7 @@ docker compose run --rm acados \
 
 # Короткая проверка запуска
 docker compose run --rm acados \
-  python3 -m vehicle_nmpc.run runner.n_sim=20
+  python3 -m vehicle_nmpc.run runner.simulation_time=0.5
 
 # Переопределить параметр задачи управления
 docker compose run --rm acados \
@@ -103,7 +103,7 @@ src/vehicle_nmpc/configs/config.yaml
 Любые значения Hydra можно переопределять из командной строки:
 
 ```bash
-python3 -m vehicle_nmpc.run runner.n_sim=200
+python3 -m vehicle_nmpc.run runner.simulation_time=5.0
 python3 -m vehicle_nmpc.run problem.params.state_weights='[30.0,30.0,3.0]'
 python3 -m vehicle_nmpc.run trajectories.0.params.speed=0.7
 ```
