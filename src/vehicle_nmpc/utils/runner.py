@@ -43,7 +43,7 @@ class Runner:
 
     def _run_estimate(self, cfg: BaseConfig) -> None:
         """Evaluate one configured controller on configured tracking trajectories."""
-        results, metrics = run_configured_evaluation(cfg)
-        save_evaluation_artifacts(results, metrics, cfg.runner.output_dir)
+        results, metrics, dt = run_configured_evaluation(cfg)
+        save_evaluation_artifacts(results, metrics, cfg.runner.output_dir, dt=dt)
         for item in metrics:
             log.info(item.print())

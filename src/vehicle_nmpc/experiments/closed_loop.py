@@ -17,6 +17,8 @@ from vehicle_nmpc.metrics import (
     evaluate_control,
     evaluate_performance,
     evaluate_tracking,
+    save_itae_plot,
+    save_tracking_error_plot,
     save_trajectory_plot,
 )
 from vehicle_nmpc.models import build_model
@@ -77,7 +79,7 @@ def run_evaluation(
 
 def run_configured_evaluation(
     cfg: BaseConfig,
-) -> tuple[list[ClosedLoopResult], list[EvaluationMetrics]]:
+) -> tuple[list[ClosedLoopResult], list[EvaluationMetrics], float]:
     """Build configured closed-loop components, run trajectories, and evaluate metrics."""
     model, problem, controller, simulator, trajectories = prepare_closed_loop(cfg)
     if not trajectories:
@@ -91,7 +93,7 @@ def run_configured_evaluation(
         trajectories,
         n_steps=cfg.runner.n_sim,
     )
-    return results, evaluate_results(results, dt=problem.dt)
+    return results, evaluate_results(results, dt=problem.dt), problem.dt
 
 
 def save_evaluation_artifacts(
@@ -99,6 +101,7 @@ def save_evaluation_artifacts(
     metrics: list[EvaluationMetrics],
     output_dir: str | Path,
     *,
+    dt: float,
     extra_metrics: Mapping[str, object] | None = None,
 ) -> None:
     """Save trajectory plots and metrics for closed-loop evaluation results."""
@@ -114,6 +117,20 @@ def save_evaluation_artifacts(
             result.reference_states,
             output_path / "plots" / f"{safe_name}.png",
             title=result.trajectory_name,
+        )
+        save_tracking_error_plot(
+            result.states,
+            result.reference_states,
+            output_path / "plots" / f"{safe_name}_errors.png",
+            title=result.trajectory_name,
+            dt=dt,
+        )
+        save_itae_plot(
+            result.states,
+            result.reference_states,
+            output_path / "plots" / f"{safe_name}_itae.png",
+            title=result.trajectory_name,
+            dt=dt,
         )
         item_data = asdict(item)
         summary.append(item_data)

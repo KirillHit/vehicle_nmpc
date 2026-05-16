@@ -8,6 +8,9 @@ import matplotlib as mpl
 import numpy as np
 from matplotlib import pyplot as plt
 
+from vehicle_nmpc.metrics.tracking import local_tracking_errors
+from vehicle_nmpc.utils.validation import require_positive
+
 mpl.use("Agg")
 
 _MATRIX_NDIM = 2
@@ -40,6 +43,68 @@ def save_trajectory_plot(
     ax.set_xlabel("X, m")
     ax.set_ylabel("Y, m")
     ax.axis("equal")
+    ax.grid(visible=True, linewidth=0.5, alpha=0.4)
+    ax.legend()
+
+    fig.savefig(output_path, dpi=160)
+    plt.close(fig)
+
+
+def save_tracking_error_plot(
+    states: np.ndarray,
+    reference_states: np.ndarray,
+    path: str | Path,
+    *,
+    title: str,
+    dt: float,
+) -> None:
+    """Save local SE(2) tracking errors over time."""
+    require_positive("dt", dt)
+    errors = local_tracking_errors(states, reference_states)
+    time = dt * np.arange(errors.shape[0])
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
+    ax.plot(time, errors[:, 0], label="longitudinal error e_x, m")
+    ax.plot(time, errors[:, 1], label="lateral error e_y, m")
+    ax.plot(time, errors[:, 2], label="heading error e_theta, rad")
+
+    ax.set_title(f"{title} tracking errors")
+    ax.set_xlabel("Time, s")
+    ax.set_ylabel("Error")
+    ax.grid(visible=True, linewidth=0.5, alpha=0.4)
+    ax.legend()
+
+    fig.savefig(output_path, dpi=160)
+    plt.close(fig)
+
+
+def save_itae_plot(
+    states: np.ndarray,
+    reference_states: np.ndarray,
+    path: str | Path,
+    *,
+    title: str,
+    dt: float,
+) -> None:
+    """Save cumulative integral time absolute lateral error over time."""
+    require_positive("dt", dt)
+    errors = local_tracking_errors(states, reference_states)
+    lateral_error = errors[:, 1]
+    time = dt * np.arange(lateral_error.size)
+    cumulative_itae = np.cumsum(time * np.abs(lateral_error) * dt)
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
+    ax.plot(time, cumulative_itae, label="cumulative ITAE lateral error")
+
+    ax.set_title(f"{title} cumulative ITAE")
+    ax.set_xlabel("Time, s")
+    ax.set_ylabel("Cumulative ITAE")
     ax.grid(visible=True, linewidth=0.5, alpha=0.4)
     ax.legend()
 

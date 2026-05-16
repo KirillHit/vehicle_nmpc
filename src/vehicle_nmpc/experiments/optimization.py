@@ -91,7 +91,7 @@ def _objective(trial: optuna.Trial, cfg: BaseConfig) -> float:
         )
 
     try:
-        results, metrics = run_configured_evaluation(trial_cfg)
+        results, metrics, dt = run_configured_evaluation(trial_cfg)
     except Exception as exc:
         trial.set_user_attr("error", repr(exc))
         log.exception("Trial %d failed.", trial.number)
@@ -102,6 +102,7 @@ def _objective(trial: optuna.Trial, cfg: BaseConfig) -> float:
         results,
         metrics,
         trial_cfg.runner.output_dir,
+        dt=dt,
         extra_metrics={
             "trial": {
                 "number": trial.number,
@@ -127,11 +128,12 @@ def _run_best_estimate(cfg: BaseConfig, best_trial: optuna.trial.FrozenTrial) ->
         best_trial.params,
         Path(cfg.runner.output_dir) / "best_estimate",
     )
-    results, metrics = run_configured_evaluation(best_cfg)
+    results, metrics, dt = run_configured_evaluation(best_cfg)
     save_evaluation_artifacts(
         results,
         metrics,
         best_cfg.runner.output_dir,
+        dt=dt,
         extra_metrics={
             "best_trial": {
                 "number": best_trial.number,
