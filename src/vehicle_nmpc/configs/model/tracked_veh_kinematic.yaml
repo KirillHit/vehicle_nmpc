@@ -7,4 +7,5 @@ params:
   right_slip: 0.05
   lateral_resistance: 0.8
   gravity: 9.81
+  yaw_rate_sign_epsilon: 0.1
   x0: [0.0, 0.0, 0.0]

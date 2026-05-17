@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from acados_template import AcadosModel
-from casadi import SX, cos, sin, vertcat
+from casadi import SX, cos, sin, sqrt, vertcat
 from omegaconf import MISSING
 
 from vehicle_nmpc.models import BaseModel, BaseModelConfig, ModelBundle, register_model
@@ -39,6 +39,9 @@ class TrackedVehKinematicModel(BaseModel):
         gravity: float = 9.81
         """Gravity acceleration."""
 
+        yaw_rate_sign_epsilon: float = 0.05
+        """Smoothing scale for yaw-rate sign."""
+
         x0: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
         """Default initial state."""
 
@@ -49,6 +52,7 @@ class TrackedVehKinematicModel(BaseModel):
             require_positive("track_contact_length", self.track_contact_length)
             require_positive("lateral_resistance", self.lateral_resistance)
             require_positive("gravity", self.gravity)
+            require_positive("yaw_rate_sign_epsilon", self.yaw_rate_sign_epsilon)
             require_slip("left_slip", self.left_slip)
             require_slip("right_slip", self.right_slip)
 
@@ -86,6 +90,7 @@ class TrackedVehKinematicModel(BaseModel):
         lateral_resistance = SX.sym("mu_t")
         track_contact_length = SX.sym("l")
         gravity = SX.sym("g")
+        yaw_rate_sign_epsilon = SX.sym("eps_omega")
 
         p = vertcat(
             sprocket_radius,
@@ -95,6 +100,7 @@ class TrackedVehKinematicModel(BaseModel):
             lateral_resistance,
             track_contact_length,
             gravity,
+            yaw_rate_sign_epsilon,
         )
 
         left_track_speed = sprocket_radius * omega_l * (1.0 - left_slip)
@@ -102,7 +108,14 @@ class TrackedVehKinematicModel(BaseModel):
 
         yaw_rate = (right_track_speed - left_track_speed) / track_width
         longitudinal_speed = (right_track_speed + left_track_speed) / 2.0
-        tan_beta = track_contact_length * yaw_rate * yaw_rate / (2.0 * lateral_resistance * gravity)
+        yaw_rate_sign = self._smooth_sign(yaw_rate, yaw_rate_sign_epsilon)
+        tan_beta = (
+            track_contact_length
+            * yaw_rate
+            * yaw_rate
+            * yaw_rate_sign
+            / (2.0 * lateral_resistance * gravity)
+        )
         lateral_speed = -longitudinal_speed * tan_beta
 
         f_expl = vertcat(
@@ -130,7 +143,7 @@ class TrackedVehKinematicModel(BaseModel):
             model=model,
             nx=3,
             nu=2,
-            np=7,
+            np=8,
             p0=as_vector(
                 "p0",
                 [
@@ -141,8 +154,13 @@ class TrackedVehKinematicModel(BaseModel):
                     self._cfg.lateral_resistance,
                     self._cfg.track_contact_length,
                     self._cfg.gravity,
+                    self._cfg.yaw_rate_sign_epsilon,
                 ],
-                7,
+                8,
             ),
             x0=as_vector("x0", self._cfg.x0, 3),
         )
+
+    def _smooth_sign(self, value: SX, eps: SX) -> SX:
+        """Return a differentiable sign approximation."""
+        return value / sqrt(value * value + eps * eps)

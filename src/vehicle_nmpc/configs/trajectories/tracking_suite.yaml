@@ -10,4 +10,4 @@
     deceleration: 0.4
 - name: turn
   params:
-    curvature: 3.0
+    curvature: 1.0

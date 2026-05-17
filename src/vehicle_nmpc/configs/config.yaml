@@ -1,11 +1,11 @@
 defaults:
   - base_config
-  - model: tracked_veh_dynamic
-  - problem: acados_ocp_dynamic
+  - model: tracked_veh_kinematic
+  - problem: acados_ocp_kinematic
   - sim: acados_sim
   - runner: base
-  - controller: rti_nmpc
-  - optuna: dynamic_nmpc
+  - controller: rti_nmpc_kinematic
+  - optuna: kinematic_nmpc
   - trajectories: tracking_suite
   - override hydra/job_logging: colorlog
   - _self_

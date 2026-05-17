@@ -27,6 +27,9 @@ class RtiNmpcController(BaseController):
     class Config(BaseControllerConfig):
         """RTI NMPC controller configuration."""
 
+        use_previous_control_reference: bool = False
+        """Use the previous applied control as the control reference."""
+
     def __init__(self, cfg: Config, problem: ProblemBundle, model: ModelBundle) -> None:
         """Initialize RTI controller with configuration, problem, and model bundles."""
         super().__init__(cfg, problem, model)
@@ -37,11 +40,13 @@ class RtiNmpcController(BaseController):
             verbose=False,
         )
         self._stats: dict[str, float | int] = {}
+        self._previous_control = np.zeros(self._model.nu, dtype=float)
 
     def reset(self, x0: np.ndarray) -> None:
         """Reset controller internal state for a new episode."""
         x0_array = self._validate_state(x0)
         self._set_initial_state(x0_array)
+        self._previous_control = np.zeros(self._model.nu, dtype=float)
         self._stats.clear()
 
     def solve(self, x: np.ndarray, reference: TrackingReference) -> np.ndarray:
@@ -62,6 +67,7 @@ class RtiNmpcController(BaseController):
         self._raise_for_status(feedback_status, "feedback")
 
         control = np.asarray(self._solver.get(0, "u"), dtype=float)
+        self._previous_control = control.copy()
         self._stats = {
             "preparation_status": preparation_status,
             "feedback_status": feedback_status,
@@ -87,7 +93,10 @@ class RtiNmpcController(BaseController):
             (self._prediction_steps + 1, self._model.nx),
         )
 
-        control_target = np.zeros((self._prediction_steps, self._model.nu), dtype=float)
+        if self._cfg.use_previous_control_reference:
+            control_target = np.tile(self._previous_control, (self._prediction_steps, 1))
+        else:
+            control_target = np.zeros((self._prediction_steps, self._model.nu), dtype=float)
         stage_references = np.hstack((x_ref[:-1], control_target))
         terminal_reference = x_ref[-1]
 

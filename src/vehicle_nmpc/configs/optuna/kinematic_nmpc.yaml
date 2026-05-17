@@ -1,0 +1,66 @@
+n_trials: 50
+parameters:
+  - parameter: problem.params.prediction_horizon_time
+    type: float
+    low: 0.4
+    high: 1.8
+  - parameter: problem.params.prediction_steps
+    type: int
+    low: 20
+    high: 100
+  - parameter: problem.params.state_weights.0
+    type: float
+    low: 1.0
+    high: 20.0
+    log: true
+  - parameter: problem.params.state_weights.1
+    type: float
+    low: 1.0
+    high: 20.0
+    log: true
+  - parameter: problem.params.state_weights.2
+    type: float
+    low: 0.5
+    high: 20.0
+    log: true
+  - parameter: problem.params.control_weights.0
+    type: float
+    low: 0.001
+    high: 1.0
+    log: true
+  - parameter: problem.params.control_weights.1
+    type: float
+    low: 0.001
+    high: 1.0
+    log: true
+  - parameter: problem.params.sim_method_newton_iter
+    type: int
+    low: 5
+    high: 15
+  - parameter: problem.params.qp_solver_cond_n
+    type: int
+    low: 10
+    high: 60
+  - parameter: problem.params.translate_nls_cost_to_conl
+    type: categorical
+    choices:
+      - true
+      - false
+objective:
+  direction: minimize
+  components:
+    - metric: tracking.rmse_lateral_error
+      aggregation: mean
+      weight: 1.0
+    - metric: tracking.max_abs_lateral_error
+      aggregation: max
+      weight: 0.5
+    - metric: tracking.mean_abs_heading_error
+      aggregation: mean
+      weight: 0.3
+    - metric: control.mean_squared_delta_control
+      aggregation: mean
+      weight: 0.02
+    - metric: performance.mean_solve_time
+      aggregation: mean
+      weight: 0.05
