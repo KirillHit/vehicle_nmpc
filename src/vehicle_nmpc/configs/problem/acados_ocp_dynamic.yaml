@@ -1,9 +1,15 @@
 name: acados_ocp
 params:
-  prediction_steps: 40
-  prediction_horizon_time: 2.0
+  prediction_steps: 116
+  prediction_horizon_time: 1.54062180820707
   artifacts_dir: ${runner.output_dir}/acados
-  state_weights: [10.0, 10.0, 2.0, 0.0, 0.0, 0.0]
+  state_weights:
+    - 143.324101021568
+    - 299.4128072064513
+    - 0.10115134352282715
+    - 2.160707810268407
+    - 0.12688852400569012
+    - 0.08300326851749555
   control_weights: [1.0e-8, 1.0e-8]
   control_lower_bounds: [-500.0, -500.0]
   control_upper_bounds: [500.0, 500.0]
@@ -11,6 +17,6 @@ params:
   qp_solver: PARTIAL_CONDENSING_HPIPM
   hessian_approx: GAUSS_NEWTON
   integrator_type: IRK
-  sim_method_newton_iter: 10
-  qp_solver_cond_n: 20
-  translate_nls_cost_to_conl: true
+  sim_method_newton_iter: 6
+  qp_solver_cond_n: 33
+  translate_nls_cost_to_conl: false
