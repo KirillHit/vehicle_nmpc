@@ -2,19 +2,18 @@
 
 from .base import BaseTrajectoryConfig, BaseTrajectoryProvider
 from .builder import build_trajectory, register_trajectory
-from .providers import (
-    FigureEightTrajectoryProvider,
-    SCurveTrajectoryProvider,
-    SquareTrajectoryProvider,
-    StraightTrajectoryProvider,
-    TurnTrajectoryProvider,
-)
+from .constant_speed_route import ConstantSpeedRouteConfig, ConstantSpeedRouteProvider
+from .figure_eight import FigureEightTrajectoryProvider
+from .square import SquareTrajectoryProvider
+from .straight import StraightTrajectoryProvider
+from .turn import TurnTrajectoryProvider
 
 __all__ = [
     "BaseTrajectoryConfig",
     "BaseTrajectoryProvider",
+    "ConstantSpeedRouteConfig",
+    "ConstantSpeedRouteProvider",
     "FigureEightTrajectoryProvider",
-    "SCurveTrajectoryProvider",
     "SquareTrajectoryProvider",
     "StraightTrajectoryProvider",
     "TurnTrajectoryProvider",

@@ -211,12 +211,13 @@ def _run_trajectory(
     reference_states = np.zeros((n_steps + 1, model.nx), dtype=float)
     stats: list[dict] = []
 
+    trajectory.reset()
     states[0] = trajectory.initial_state()
     controller.reset(states[0])
     simulator.reset(states[0])
 
     for step in range(n_steps):
-        reference = trajectory.reference_at(step)
+        reference = trajectory.reference_at(states[step])
         reference_states[step] = reference.x[0]
         if step == n_steps - 1:
             reference_states[step + 1] = reference.x[1]
