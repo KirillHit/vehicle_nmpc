@@ -2,7 +2,7 @@ defaults:
   - base_config
   - model: tracked_veh_dynamic
   - problem: acados_ocp_dynamic
-  - sim: acados_sim
+  - sim: ros2
   - runner: base
   - controller: rti_nmpc_dynamic
   - optuna: kinematic_nmpc

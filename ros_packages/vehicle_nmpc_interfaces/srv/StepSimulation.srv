@@ -1,0 +1,11 @@
+uint8 COMMAND_MODE_TRACK_SPEED=1
+uint8 COMMAND_MODE_TRACK_TORQUE=2
+
+float64 dt
+uint8 command_mode
+float64[] command
+---
+bool success
+string message
+float64 time
+float64[] state

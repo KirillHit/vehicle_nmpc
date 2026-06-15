@@ -1,0 +1,10 @@
+name: ros2
+params:
+  node_name: vehicle_nmpc_ros2_sim
+  namespace: /vehicle
+  step_service: step
+  reset_service: reset
+  command_mode: track_torque
+  wait_timeout_sec: 10.0
+  service_timeout_sec: 5.0
+  spin_period_sec: 0.01

@@ -3,9 +3,11 @@ services:
   acados:
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: docker/dockerfile
     image: acados:latest
     container_name: acados
+    network_mode: host
+    ipc: host
     volumes:
       - ./src/vehicle_nmpc:/workspace/vehicle_nmpc:ro
       - ./runs:/workspace/runs
