@@ -1,5 +1,5 @@
 seed: 42
 experiment_name: test
 mode: estimate
-simulation_time: 50.0
+simulation_time: 30.0
 output_dir: ${hydra:runtime.output_dir}

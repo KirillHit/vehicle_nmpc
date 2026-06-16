@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import re
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -39,6 +40,8 @@ if TYPE_CHECKING:
     from vehicle_nmpc.utils.config import BaseConfig
 
 log = logging.getLogger(__name__)
+
+_PROGRESS_LOG_INTERVAL_S = 2.0
 
 
 @dataclass(kw_only=True, slots=True)
@@ -193,6 +196,25 @@ def _write_json(path: Path, data: object) -> None:
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
+def _log_progress(
+    trajectory_name: str,
+    step: int,
+    n_steps: int,
+    state: np.ndarray,
+    control: np.ndarray,
+) -> None:
+    """Log one closed-loop progress sample."""
+    log.debug(
+        "%s step %d/%d (%.1f%%) state=%s control=%s",
+        trajectory_name,
+        step,
+        n_steps,
+        100.0 * step / n_steps,
+        np.array2string(state, precision=4, suppress_small=True),
+        np.array2string(control, precision=4, suppress_small=True),
+    )
+
+
 def _run_trajectory(
     controller: BaseController,
     simulator: BaseSimulator,
@@ -216,6 +238,7 @@ def _run_trajectory(
     controller.reset(states[0])
     simulator.reset(states[0])
 
+    last_progress_log = time.monotonic()
     for step in range(n_steps):
         reference = trajectory.reference_at(states[step])
         reference_states[step] = reference.x[0]
@@ -224,6 +247,11 @@ def _run_trajectory(
         controls[step] = controller.solve(states[step], reference=reference)
         stats.append(controller.get_stats())
         states[step + 1] = simulator.step(states[step], controls[step])
+
+        now = time.monotonic()
+        if now - last_progress_log >= _PROGRESS_LOG_INTERVAL_S or step == n_steps - 1:
+            _log_progress(trajectory.name, step + 1, n_steps, states[step + 1], controls[step])
+            last_progress_log = now
 
     return ClosedLoopResult(
         trajectory_name=trajectory.name,
