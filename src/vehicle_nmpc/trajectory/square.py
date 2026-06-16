@@ -48,6 +48,7 @@ class SquareTrajectoryProvider(BaseTrajectoryProvider):
         """Square trajectory configuration."""
 
         straight_speed: float = 0.5
+        min_line_speed: float = 0.15
         straight_length: float = 2.0
         turn_speed: float = 1.0
         deceleration: float = 0.5
@@ -59,12 +60,19 @@ class SquareTrajectoryProvider(BaseTrajectoryProvider):
             """Validate square trajectory parameters."""
             BaseTrajectoryConfig.__post_init__(self)
             require_positive("straight_speed", self.straight_speed)
+            require_positive("min_line_speed", self.min_line_speed)
             require_positive("straight_length", self.straight_length)
             require_positive("turn_speed", self.turn_speed)
             require_positive("deceleration", self.deceleration)
             require_positive("stop_position_tolerance", self.stop_position_tolerance)
             require_positive("stop_speed_tolerance", self.stop_speed_tolerance)
             require_positive("turn_yaw_tolerance", self.turn_yaw_tolerance)
+            if self.min_line_speed > self.straight_speed:
+                msg = (
+                    "min_line_speed must be less than or equal to "
+                    f"straight_speed, got {self.min_line_speed} > {self.straight_speed}."
+                )
+                raise ValueError(msg)
 
     def __init__(self, cfg: Config, *args: object, **kwargs: object) -> None:
         """Initialize square route state."""
@@ -178,7 +186,10 @@ class SquareTrajectoryProvider(BaseTrajectoryProvider):
         """Return the line speed that still allows stopping at the next corner."""
         distance_left = self._cfg.straight_length - progress
         braking_speed = np.sqrt(max(2.0 * self._cfg.deceleration * distance_left, 0.0))
-        return min(self._cfg.straight_speed, float(braking_speed))
+        speed = min(self._cfg.straight_speed, float(braking_speed))
+        if distance_left > self._cfg.stop_position_tolerance:
+            speed = max(speed, self._cfg.min_line_speed)
+        return speed
 
     def _line_state(self, side: int, progress: float, speed: float) -> np.ndarray:
         """Return one canonical state on a square edge."""

@@ -15,6 +15,7 @@ mpl.use("Agg")
 
 _MATRIX_NDIM = 2
 _STATE_SIZE = 3
+_SPEED_STATE_INDEX = 3
 
 
 def save_trajectory_plot(
@@ -43,6 +44,74 @@ def save_trajectory_plot(
     ax.set_xlabel("X, m")
     ax.set_ylabel("Y, m")
     ax.axis("equal")
+    ax.grid(visible=True, linewidth=0.5, alpha=0.4)
+    ax.legend()
+
+    fig.savefig(output_path, dpi=160)
+    plt.close(fig)
+
+
+def save_control_plot(
+    control: np.ndarray,
+    path: str | Path,
+    *,
+    title: str,
+    dt: float,
+) -> None:
+    """Save control plot."""
+    require_positive("dt", dt)
+    time = dt * np.arange(control.shape[0])
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
+
+    for idx in range(control.shape[1]):
+        ax.plot(time, control[:, idx], label=f"u_{idx}")
+
+    ax.set_title(f"{title} control")
+    ax.set_xlabel("Time, s")
+    ax.set_ylabel("Control value")
+    ax.grid(visible=True, linewidth=0.5, alpha=0.4)
+    ax.legend()
+
+    fig.savefig(output_path, dpi=160)
+    plt.close(fig)
+
+
+def save_speed_plot(
+    states: np.ndarray,
+    reference_states: np.ndarray,
+    path: str | Path,
+    *,
+    title: str,
+    dt: float,
+) -> None:
+    """Save actual-vs-reference speed plot."""
+    require_positive("dt", dt)
+    states_array = np.asarray(states, dtype=float)
+    reference_array = np.asarray(reference_states, dtype=float)
+    if (
+        states_array.ndim != _MATRIX_NDIM
+        or reference_array.ndim != _MATRIX_NDIM
+        or states_array.shape[1] <= _SPEED_STATE_INDEX
+        or reference_array.shape[1] <= _SPEED_STATE_INDEX
+    ):
+        return
+
+    time = dt * np.arange(states_array.shape[0])
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
+    ax.plot(time, reference_array[:, _SPEED_STATE_INDEX], "--", label="target speed")
+    ax.plot(time, states_array[:, _SPEED_STATE_INDEX], "-", label="actual speed")
+
+    ax.set_title(f"{title} speed tracking")
+    ax.set_xlabel("Time, s")
+    ax.set_ylabel("Longitudinal speed, m/s")
     ax.grid(visible=True, linewidth=0.5, alpha=0.4)
     ax.legend()
 

@@ -19,7 +19,9 @@ from vehicle_nmpc.metrics import (
     evaluate_control,
     evaluate_performance,
     evaluate_tracking,
+    save_control_plot,
     save_itae_plot,
+    save_speed_plot,
     save_tracking_error_plot,
     save_trajectory_plot,
 )
@@ -129,6 +131,19 @@ def save_evaluation_artifacts(
             result.states,
             result.reference_states,
             output_path / "plots" / f"{safe_name}_itae.png",
+            title=result.trajectory_name,
+            dt=dt,
+        )
+        save_control_plot(
+            result.controls,
+            output_path / "plots" / f"{safe_name}_control.png",
+            title=result.trajectory_name,
+            dt=dt,
+        )
+        save_speed_plot(
+            result.states,
+            result.reference_states,
+            output_path / "plots" / f"{safe_name}_speed.png",
             title=result.trajectory_name,
             dt=dt,
         )

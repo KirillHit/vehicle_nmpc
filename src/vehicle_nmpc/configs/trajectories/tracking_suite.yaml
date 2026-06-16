@@ -5,7 +5,7 @@
 - name: square
   params:
     straight_speed: 1.0
-    straight_length: 4.0
+    straight_length: 3.0
     turn_speed: 0.8
     deceleration: 0.4
 - name: turn
