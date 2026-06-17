@@ -16,6 +16,9 @@ mpl.use("Agg")
 _MATRIX_NDIM = 2
 _STATE_SIZE = 3
 _SPEED_STATE_INDEX = 3
+_CONTROL_SMOOTHING_WINDOW = 5
+_SPEED_SMOOTHING_WINDOW = 5
+_TRACKING_ERROR_SMOOTHING_WINDOW = 5
 
 
 def save_trajectory_plot(
@@ -68,7 +71,8 @@ def save_control_plot(
     fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
 
     for idx in range(control.shape[1]):
-        ax.plot(time, control[:, idx], label=f"u_{idx}")
+        smoothed_control = _moving_average(control[:, idx], _CONTROL_SMOOTHING_WINDOW)
+        ax.plot(time, smoothed_control, label=f"u_{idx}")
 
     ax.set_title(f"{title} control")
     ax.set_xlabel("Time, s")
@@ -106,8 +110,9 @@ def save_speed_plot(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
+    actual_speed = _moving_average(states_array[:, _SPEED_STATE_INDEX], _SPEED_SMOOTHING_WINDOW)
     ax.plot(time, reference_array[:, _SPEED_STATE_INDEX], "--", label="target speed")
-    ax.plot(time, states_array[:, _SPEED_STATE_INDEX], "-", label="actual speed")
+    ax.plot(time, actual_speed, "-", label="actual speed")
 
     ax.set_title(f"{title} speed tracking")
     ax.set_xlabel("Time, s")
@@ -136,9 +141,21 @@ def save_tracking_error_plot(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(9.0, 5.0), constrained_layout=True)
-    ax.plot(time, errors[:, 0], label="longitudinal error e_x, m")
-    ax.plot(time, errors[:, 1], label="lateral error e_y, m")
-    ax.plot(time, errors[:, 2], label="heading error e_theta, rad")
+    ax.plot(
+        time,
+        _moving_average(errors[:, 0], _TRACKING_ERROR_SMOOTHING_WINDOW),
+        label="longitudinal error e_x, m",
+    )
+    ax.plot(
+        time,
+        _moving_average(errors[:, 1], _TRACKING_ERROR_SMOOTHING_WINDOW),
+        label="lateral error e_y, m",
+    )
+    ax.plot(
+        time,
+        _moving_average(errors[:, 2], _TRACKING_ERROR_SMOOTHING_WINDOW),
+        label="heading error e_theta, rad",
+    )
 
     ax.set_title(f"{title} tracking errors")
     ax.set_xlabel("Time, s")
@@ -218,6 +235,16 @@ def _yaw_marker_length(trajectory: np.ndarray) -> float:
     y_range = float(np.ptp(trajectory[:, 1]))
     span = max(x_range, y_range, 1.0)
     return 0.04 * span
+
+
+def _moving_average(values: np.ndarray, window: int) -> np.ndarray:
+    """Return a centered moving average with the same shape as input values."""
+    array = np.asarray(values, dtype=float)
+    if window <= 1 or array.shape[0] < window:
+        return array
+
+    weights = np.full(window, 1.0 / window, dtype=float)
+    return np.convolve(array, weights, mode="same")
 
 
 def _as_pose_trajectory(name: str, values: np.ndarray) -> np.ndarray:

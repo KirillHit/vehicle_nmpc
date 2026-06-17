@@ -1,14 +1,14 @@
-- name: figure_eight
-  params:
-    scale: 4.0
-    speed: 1.0
 - name: square
   params:
     straight_speed: 1.0
     straight_length: 3.0
-    turn_speed: 0.8
+    turn_speed: 1.0
     deceleration: 0.4
+- name: figure_eight
+  params:
+    scale: 3.0
+    speed: 1.0
 - name: turn
   params:
-    curvature: 0.25
+    curvature: 0.5
     speed: 1.0

@@ -48,7 +48,7 @@ class SquareTrajectoryProvider(BaseTrajectoryProvider):
         """Square trajectory configuration."""
 
         straight_speed: float = 0.5
-        min_line_speed: float = 0.15
+        min_line_speed: float = 0.30
         straight_length: float = 2.0
         turn_speed: float = 1.0
         deceleration: float = 0.5
